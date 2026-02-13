@@ -50,6 +50,8 @@ node scripts/reliability/compute-kpi-report.mjs \
   --appVersion <app-version>
 ```
 
+`compute-kpi-report` stores `executionStatus.rawRunsPath` relative to the generated report file.
+
 ## Check two-run KPI gate
 
 ```bash

@@ -1,6 +1,6 @@
 {
   "reportVersion": "v1",
-  "generatedAt": "2026-02-13T13:06:03.274Z",
+  "generatedAt": "2026-02-13T13:38:38.357Z",
   "scope": {
     "runId": "baseline-run-001-generated",
     "runType": "baseline",
@@ -63,6 +63,6 @@
   },
   "executionStatus": {
     "state": "executed",
-    "rawRunsPath": "docs/reliability/artifacts/2026-02-13-baseline-run-001.raw-runs.ndjson"
+    "rawRunsPath": "2026-02-13-baseline-run-001.raw-runs.ndjson"
   }
 }

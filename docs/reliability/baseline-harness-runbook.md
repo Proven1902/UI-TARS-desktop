@@ -92,6 +92,8 @@ node scripts/reliability/compute-kpi-report.mjs \
   --appVersion <app-version>
 ```
 
+`compute-kpi-report` writes `executionStatus.rawRunsPath` relative to the report location.
+
 ```bash
 node scripts/reliability/check-kpi-gate.mjs \
   --first docs/reliability/artifacts/<run-1>.report.json \

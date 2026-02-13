@@ -221,6 +221,17 @@ const resolveRepoIdentity = async (explicitRepo) => {
   }
 };
 
+const toReportRelativePath = (targetPath, reportPath) => {
+  const reportDirectory = path.dirname(path.resolve(reportPath));
+  const resolvedTargetPath = path.resolve(targetPath);
+  const relativeTargetPath = path.relative(reportDirectory, resolvedTargetPath);
+  if (relativeTargetPath && relativeTargetPath.length > 0) {
+    return relativeTargetPath;
+  }
+
+  return path.basename(resolvedTargetPath);
+};
+
 const ensureRow = (row, rowIndex) => {
   const requiredStringFields = [
     'runId',
@@ -438,6 +449,7 @@ const main = async () => {
   const scenarioCoveragePass = missingScenarioIds.length === 0;
   const coveragePass = sampleCountPass && scenarioCoveragePass;
   const allPass = openAppPass && wrongClickPass && coveragePass;
+  const reportRelativeRawRunsPath = toReportRelativePath(rawPath, outputPath);
 
   const report = {
     reportVersion: 'v1',
@@ -487,7 +499,7 @@ const main = async () => {
     },
     executionStatus: {
       state: 'executed',
-      rawRunsPath: rawPath,
+      rawRunsPath: reportRelativeRawRunsPath,
     },
   };
 
