@@ -380,4 +380,38 @@ describe('InvokeGateOperator', () => {
       (innerOperator as never as { execute: ReturnType<typeof vi.fn> }).execute,
     ).not.toHaveBeenCalled();
   });
+
+  it('rejects unhandled tool-only action instead of visual fallback', async () => {
+    const innerOperator = createInnerOperator();
+    const toolFirstRouter = vi.fn().mockResolvedValue({
+      handled: false,
+      status: StatusEnum.RUNNING,
+      toolName: 'app.launch',
+      fallbackReason: 'target_unresolved',
+    });
+
+    const gatedOperator = new InvokeGateOperator({
+      innerOperator,
+      featureFlags: {
+        ffToolRegistry: true,
+        ffInvokeGate: true,
+        ffToolFirstRouting: true,
+      },
+      sessionId: 'session-11',
+      authState: 'valid',
+      maxLoopCount: 5,
+      toolFirstRouter,
+    });
+
+    await expect(
+      gatedOperator.execute(
+        buildExecuteParams('app.launch', '[1,1,1,1]', 1) as never,
+      ),
+    ).rejects.toThrow('[TOOL_FIRST_ROUTE_UNHANDLED]');
+
+    expect(toolFirstRouter).toHaveBeenCalledTimes(1);
+    expect(
+      (innerOperator as never as { execute: ReturnType<typeof vi.fn> }).execute,
+    ).not.toHaveBeenCalled();
+  });
 });

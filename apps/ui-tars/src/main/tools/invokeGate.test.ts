@@ -125,11 +125,52 @@ describe('invokeGate', () => {
     expect(windowFocusDecision.reasonCodes).toContain('auth_state_invalid');
   });
 
-  it('allows modeled navigate/release/tool actions when invoke gate is enabled', () => {
+  it('denies tool-only actions when tool-first feature flags are disabled', () => {
+    const toolIntent = buildActionIntentV1({
+      sessionId: 'session-3d',
+      parsedPrediction: {
+        action_type: 'app.launch',
+        action_inputs: { content: 'notepad' },
+        reflection: null,
+        thought: 'launch app',
+      },
+    });
+
+    const routingDisabledDecision = evaluateInvokeGate(toolIntent, {
+      featureFlags: {
+        ffToolRegistry: true,
+        ffInvokeGate: true,
+        ffToolFirstRouting: false,
+      },
+      authState: 'valid',
+      loopBudgetRemaining: 10,
+    });
+
+    const registryDisabledDecision = evaluateInvokeGate(toolIntent, {
+      featureFlags: {
+        ffToolRegistry: false,
+        ffInvokeGate: true,
+        ffToolFirstRouting: true,
+      },
+      authState: 'valid',
+      loopBudgetRemaining: 10,
+    });
+
+    expect(routingDisabledDecision.decision).toBe('deny');
+    expect(routingDisabledDecision.reasonCodes).toContain(
+      'action_type_unsupported',
+    );
+    expect(registryDisabledDecision.decision).toBe('deny');
+    expect(registryDisabledDecision.reasonCodes).toContain(
+      'action_type_unsupported',
+    );
+  });
+
+  it('allows modeled navigate/release/tool actions when invoke gate and tool-first flags are enabled', () => {
     const flags = {
       ffToolRegistry: true,
       ffInvokeGate: true,
-      ffToolFirstRouting: false,
+      ffToolFirstRouting: true,
     };
 
     const navigateIntent = buildActionIntentV1({

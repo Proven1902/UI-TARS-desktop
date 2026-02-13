@@ -16,6 +16,7 @@ import {
   type GateAuthState,
   buildActionIntentV1,
   evaluateInvokeGate,
+  isToolOnlyActionType,
 } from './invokeGate';
 import {
   executeToolFirstRoute,
@@ -119,6 +120,12 @@ export class InvokeGateOperator extends Operator {
           status: toolFirstResult.status,
         });
         return { status: toolFirstResult.status };
+      }
+
+      if (isToolOnlyActionType(params.parsedPrediction.action_type)) {
+        throw new Error(
+          `[TOOL_FIRST_ROUTE_UNHANDLED] ${toolFirstResult.fallbackReason || 'unknown'}`,
+        );
       }
 
       logger.info('[tool-first-routing] fallback to visual operator', {
