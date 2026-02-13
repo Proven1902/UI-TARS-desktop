@@ -99,13 +99,18 @@ const buildIdempotencyKey = (params: {
   actionType: string;
   target: ToolFirstTarget;
 }): string => {
+  const normalizedSessionId = params.sessionId.trim() || 'unknown-session';
+  const normalizedLoopCount =
+    typeof params.loopCount === 'number' && Number.isFinite(params.loopCount)
+      ? params.loopCount
+      : 'no-loop';
+
   return [
     'tool-first',
-    params.sessionId,
-    params.loopCount ?? 'no-loop',
+    normalizedSessionId,
+    normalizedLoopCount,
     params.actionType,
     params.target,
-    randomUUID(),
   ].join(':');
 };
 

@@ -168,4 +168,51 @@ describe('toolFirstRouter', () => {
       fallbackReason: 'unsupported_action_type',
     });
   });
+
+  it('keeps idempotency key stable across retries for same tuple', async () => {
+    const runAppLaunch = vi.fn().mockResolvedValue({
+      version: 'v1',
+      callId: 'call-retry',
+      toolName: 'app.launch',
+      toolVersion: '1.0.0',
+      status: 'error',
+      errorClass: 'non_zero_exit',
+      launched: false,
+      systemRunCallId: 'sys-retry',
+      stdout: '',
+      stderr: 'failed',
+      durationMs: 5,
+      artifacts: {
+        targetApp: 'notepad',
+        platform: 'win32',
+        stdoutBytes: 0,
+        stderrBytes: 6,
+        stdoutTruncated: false,
+        stderrTruncated: false,
+      },
+    });
+
+    const params = {
+      sessionId: 'session-retry',
+      loopCount: 7,
+      parsedPrediction: {
+        action_type: 'app.launch',
+        action_inputs: { content: 'notepad' },
+        reflection: null,
+        thought: 'launch app',
+      },
+    };
+
+    await executeToolFirstRoute(params, { runAppLaunch });
+    await executeToolFirstRoute(params, { runAppLaunch });
+
+    const firstIdempotencyKey = runAppLaunch.mock.calls[0]?.[0]?.idempotencyKey;
+    const secondIdempotencyKey =
+      runAppLaunch.mock.calls[1]?.[0]?.idempotencyKey;
+
+    expect(firstIdempotencyKey).toBe(secondIdempotencyKey);
+    expect(firstIdempotencyKey).toBe(
+      'tool-first:session-retry:7:app.launch:notepad',
+    );
+  });
 });
