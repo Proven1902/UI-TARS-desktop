@@ -47,6 +47,7 @@ const getRequiredMetadata = (report, reportLabel) => {
   const gitCommit = report?.environment?.git?.commit;
   const modelProvider = report?.environment?.model?.provider;
   const modelName = report?.environment?.model?.name;
+  const appVersion = report?.environment?.app?.version;
 
   const requiredEntries = [
     ['environment.git.repo', gitRepo],
@@ -54,6 +55,7 @@ const getRequiredMetadata = (report, reportLabel) => {
     ['environment.git.commit', gitCommit],
     ['environment.model.provider', modelProvider],
     ['environment.model.name', modelName],
+    ['environment.app.version', appVersion],
   ];
 
   for (const [field, value] of requiredEntries) {
@@ -68,6 +70,7 @@ const getRequiredMetadata = (report, reportLabel) => {
     gitCommit,
     modelProvider,
     modelName,
+    appVersion,
   };
 };
 
@@ -82,6 +85,7 @@ const ensureMatchingMetadata = (firstMeta, secondMeta) => {
       secondMeta.modelProvider,
     ],
     ['environment.model.name', firstMeta.modelName, secondMeta.modelName],
+    ['environment.app.version', firstMeta.appVersion, secondMeta.appVersion],
   ];
 
   for (const [field, firstValue, secondValue] of checks) {

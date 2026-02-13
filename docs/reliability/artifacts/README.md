@@ -23,6 +23,15 @@ Each raw run row must include consistent row-level provenance:
 - `environment.git.commit`
 - `environment.model.provider`
 - `environment.model.name`
+- `environment.app.version`
+
+Each raw run row must also include these reliability flags (boolean) and keep them consistent across the full batch:
+
+- `featureFlags.ffToolRegistry`
+- `featureFlags.ffInvokeGate`
+- `featureFlags.ffToolFirstRouting`
+- `featureFlags.ffConfidenceLayer`
+- `featureFlags.ffLoopGuardrails`
 
 ## Generate KPI report from raw runs
 
@@ -37,7 +46,8 @@ node scripts/reliability/compute-kpi-report.mjs \
   --branch main \
   --commit <commit-sha> \
   --provider <provider-name> \
-  --model <model-name>
+  --model <model-name> \
+  --appVersion <app-version>
 ```
 
 ## Check two-run KPI gate
@@ -54,7 +64,7 @@ The gate checker rejects:
 
 - duplicated `--first/--second` report path
 - duplicated `scope.runId` values
-- mismatched build/model provenance fields across reports (`environment.git.*`, `environment.model.*`)
+- mismatched build/model provenance fields across reports (`environment.git.*`, `environment.model.*`, `environment.app.version`)
 - reports without full coverage pass
 
 `minSampleCount` is clamped to at least `200` (runbook minimum), even if a lower value is passed.

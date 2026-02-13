@@ -18,6 +18,14 @@ const DEFAULT_MIN_SAMPLE_COUNT = 200;
 
 const OPEN_APP_SCENARIO_IDS = new Set(['open_cursor', 'open_settings']);
 
+const RELIABILITY_FLAG_FIELDS = [
+  'ffToolRegistry',
+  'ffInvokeGate',
+  'ffToolFirstRouting',
+  'ffConfidenceLayer',
+  'ffLoopGuardrails',
+];
+
 const parseArgs = () => {
   const args = process.argv.slice(2);
   const result = {};
@@ -76,6 +84,16 @@ const readRequiredString = (value, fieldPath, rowIndex) => {
   return value.trim();
 };
 
+const readRequiredBoolean = (value, fieldPath, rowIndex) => {
+  if (typeof value !== 'boolean') {
+    throw new Error(
+      `Invalid raw-run row ${rowIndex + 1}: '${fieldPath}' must be boolean`,
+    );
+  }
+
+  return value;
+};
+
 const extractRowProvenance = (row, rowIndex) => {
   const gitRepo = readRequiredString(
     row?.environment?.git?.repo,
@@ -102,6 +120,11 @@ const extractRowProvenance = (row, rowIndex) => {
     'environment.model.name',
     rowIndex,
   );
+  const appVersion = readRequiredString(
+    row?.environment?.app?.version,
+    'environment.app.version',
+    rowIndex,
+  );
 
   return {
     gitRepo,
@@ -109,7 +132,19 @@ const extractRowProvenance = (row, rowIndex) => {
     gitCommit,
     modelProvider,
     modelName,
+    appVersion,
   };
+};
+
+const extractRowFeatureFlags = (row, rowIndex) => {
+  return RELIABILITY_FLAG_FIELDS.reduce((accumulator, fieldName) => {
+    accumulator[fieldName] = readRequiredBoolean(
+      row?.featureFlags?.[fieldName],
+      `featureFlags.${fieldName}`,
+      rowIndex,
+    );
+    return accumulator;
+  }, {});
 };
 
 const ensureMatchingProvenance = (reference, current, rowIndex) => {
@@ -123,12 +158,25 @@ const ensureMatchingProvenance = (reference, current, rowIndex) => {
       current.modelProvider,
     ],
     ['environment.model.name', reference.modelName, current.modelName],
+    ['environment.app.version', reference.appVersion, current.appVersion],
   ];
 
   for (const [field, expected, actual] of fields) {
     if (expected !== actual) {
       throw new Error(
         `Invalid raw-run row ${rowIndex + 1}: mismatched ${field} ('${actual}' != '${expected}')`,
+      );
+    }
+  }
+};
+
+const ensureMatchingFeatureFlags = (reference, current, rowIndex) => {
+  for (const fieldName of RELIABILITY_FLAG_FIELDS) {
+    const expected = reference[fieldName];
+    const actual = current[fieldName];
+    if (expected !== actual) {
+      throw new Error(
+        `Invalid raw-run row ${rowIndex + 1}: mismatched featureFlags.${fieldName} ('${actual}' != '${expected}')`,
       );
     }
   }
@@ -266,7 +314,7 @@ const main = async () => {
 
   if (!rawPath || !outputPath) {
     throw new Error(
-      'Usage: node scripts/reliability/compute-kpi-report.mjs --raw <raw.ndjson> --out <report.json> [--runId <id>] [--repo <owner/repo>] [--commit <sha>] [--provider <name>] [--model <name>] [--runType <baseline|gate>] [--minSampleCount <n>]',
+      'Usage: node scripts/reliability/compute-kpi-report.mjs --raw <raw.ndjson> --out <report.json> [--runId <id>] [--repo <owner/repo>] [--branch <name>] [--commit <sha>] [--provider <name>] [--model <name>] [--appVersion <version>] [--runType <baseline|gate>] [--minSampleCount <n>]',
     );
   }
 
@@ -274,6 +322,7 @@ const main = async () => {
   const commit = getRequiredArg(args, 'commit');
   const provider = getRequiredArg(args, 'provider');
   const model = getRequiredArg(args, 'model');
+  const appVersion = getRequiredArg(args, 'appVersion');
 
   const rows = await readRawRuns(rawPath);
   const rowProvenance = rows.map((row, index) => {
@@ -286,6 +335,18 @@ const main = async () => {
 
   rowProvenance.slice(1).forEach((provenance, index) => {
     ensureMatchingProvenance(referenceProvenance, provenance, index + 1);
+  });
+
+  const rowFeatureFlags = rows.map((row, index) => {
+    return extractRowFeatureFlags(row, index);
+  });
+  const referenceFeatureFlags = rowFeatureFlags[0];
+  if (!referenceFeatureFlags) {
+    throw new Error('Raw runs artifact must include at least one row');
+  }
+
+  rowFeatureFlags.slice(1).forEach((featureFlags, index) => {
+    ensureMatchingFeatureFlags(referenceFeatureFlags, featureFlags, index + 1);
   });
 
   const openAppRows = rows.filter((row) => OPEN_APP_SCENARIO_IDS.has(row.scenarioId));
@@ -356,6 +417,12 @@ const main = async () => {
     );
   }
 
+  if (referenceProvenance.appVersion !== appVersion) {
+    throw new Error(
+      `CLI --appVersion (${appVersion}) does not match row provenance (${referenceProvenance.appVersion})`,
+    );
+  }
+
   const openAppPass =
     openAppFirstAttemptSuccessRate !== null && openAppFirstAttemptSuccessRate >= 0.95;
   const wrongClickPass = wrongClickRate !== null && wrongClickRate < 0.01;
@@ -393,6 +460,10 @@ const main = async () => {
         provider,
         name: model,
       },
+      app: {
+        version: appVersion,
+      },
+      featureFlags: referenceFeatureFlags,
     },
     metrics: {
       openAppFirstAttemptSuccessRate,

@@ -56,7 +56,14 @@ For every run, persist at minimum:
   - `environment.git.commit`
   - `environment.model.provider`
   - `environment.model.name`
-- active feature flags and provider/model settings
+  - `environment.app.version`
+- active feature flags (required on every row and must be consistent across batch):
+  - `featureFlags.ffToolRegistry`
+  - `featureFlags.ffInvokeGate`
+  - `featureFlags.ffToolFirstRouting`
+  - `featureFlags.ffConfidenceLayer`
+  - `featureFlags.ffLoopGuardrails`
+- provider/model settings
 
 Store artifacts in `docs/reliability/artifacts/` using timestamped file names.
 
@@ -81,7 +88,8 @@ node scripts/reliability/compute-kpi-report.mjs \
   --branch main \
   --commit <commit-sha> \
   --provider <provider-name> \
-  --model <model-name>
+  --model <model-name> \
+  --appVersion <app-version>
 ```
 
 ```bash
@@ -104,6 +112,7 @@ The two-run gate check must also fail if provenance metadata differs between rep
 - `environment.git.commit`
 - `environment.model.provider`
 - `environment.model.name`
+- `environment.app.version`
 
 ## 6. Acceptance thresholds
 
