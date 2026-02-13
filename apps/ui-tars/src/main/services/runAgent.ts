@@ -63,11 +63,6 @@ export const runAgent = async (
   assert(instructions, 'instructions is required');
   const runtimeSessionId = `main-${Date.now()}`;
   const checkpointRecovery = CheckpointRecoveryService.getInstance();
-  checkpointRecovery.beginRun({
-    sessionId: runtimeSessionId,
-    instruction: instructions,
-    sessionHistoryMessages,
-  });
 
   const language = settings.language ?? 'en';
   const maxLoopCount = settings.maxLoopCount ?? 100;
@@ -332,6 +327,12 @@ export const runAgent = async (
       maxLoopCount,
     });
   }
+
+  checkpointRecovery.beginRun({
+    sessionId: runtimeSessionId,
+    instruction: instructions,
+    sessionHistoryMessages,
+  });
 
   const systemPrompt = getSpByModelVersion(
     modelVersion,
