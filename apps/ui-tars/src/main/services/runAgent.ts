@@ -47,6 +47,10 @@ import { createDefaultToolRegistry } from '@main/tools/toolRegistry';
 import { InvokeGateOperator } from '@main/tools/invokeGateOperator';
 import { type GateAuthState } from '@main/tools/invokeGate';
 import { classifyRuntimeErrorV1 } from '@main/tools/errorTaxonomy';
+import {
+  CheckpointRecoveryService,
+  deriveRecoveryFsmState,
+} from '@main/services/checkpointRecovery';
 
 export const runAgent = async (
   setState: (state: AppState) => void,
@@ -54,8 +58,16 @@ export const runAgent = async (
 ) => {
   logger.info('runAgent');
   const settings = SettingStore.getStore();
-  const { instructions, abortController } = getState();
+  const { abortController } = getState();
+  const { instructions, sessionHistoryMessages } = getState();
   assert(instructions, 'instructions is required');
+  const runtimeSessionId = `main-${Date.now()}`;
+  const checkpointRecovery = CheckpointRecoveryService.getInstance();
+  checkpointRecovery.beginRun({
+    sessionId: runtimeSessionId,
+    instruction: instructions,
+    sessionHistoryMessages,
+  });
 
   const language = settings.language ?? 'en';
   const maxLoopCount = settings.maxLoopCount ?? 100;
@@ -140,6 +152,21 @@ export const runAgent = async (
       status,
       restUserData,
       messages: [...(getState().messages || []), ...conversationsWithSoM],
+    });
+
+    const recoveryFsmState = deriveRecoveryFsmState(status);
+    if (
+      recoveryFsmState === 'completed' ||
+      recoveryFsmState === 'user_stopped'
+    ) {
+      checkpointRecovery.clearCheckpoint();
+      return;
+    }
+
+    checkpointRecovery.updateStatus({
+      sessionId: runtimeSessionId,
+      status,
+      fsmState: recoveryFsmState,
     });
   };
 
@@ -300,7 +327,7 @@ export const runAgent = async (
     runtimeOperator = new InvokeGateOperator({
       innerOperator: operator,
       featureFlags: runtimeToolFlags,
-      sessionId: `main-${Date.now()}`,
+      sessionId: runtimeSessionId,
       authState: invokeGateAuthState,
       maxLoopCount,
     });
@@ -336,6 +363,12 @@ export const runAgent = async (
           retryable: taxonomy.retryable,
         }),
       });
+      checkpointRecovery.updateStatus({
+        sessionId: runtimeSessionId,
+        status: StatusEnum.ERROR,
+        fsmState: 'error',
+        errorMsg: error?.message,
+      });
     },
     retry: {
       model: {
@@ -355,8 +388,6 @@ export const runAgent = async (
 
   GUIAgentManager.getInstance().setAgent(guiAgent);
   UTIOService.getInstance().sendInstruction(instructions);
-
-  const { sessionHistoryMessages } = getState();
 
   beforeAgentRun(settings.operator);
 
@@ -383,7 +414,21 @@ export const runAgent = async (
           retryable: taxonomy.retryable,
         }),
       });
+      checkpointRecovery.updateStatus({
+        sessionId: runtimeSessionId,
+        status: StatusEnum.ERROR,
+        fsmState: 'error',
+        errorMsg: message,
+      });
     });
+
+  const finalStatus = getState().status;
+  if (
+    finalStatus === StatusEnum.END ||
+    finalStatus === StatusEnum.USER_STOPPED
+  ) {
+    checkpointRecovery.clearCheckpoint();
+  }
 
   logger.info('[runAgent Totoal cost]: ', (Date.now() - startTime) / 1000, 's');
 
