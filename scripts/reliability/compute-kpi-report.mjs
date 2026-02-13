@@ -2,6 +2,10 @@
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const execFileAsync = promisify(execFile);
 
 const CANONICAL_SCENARIO_IDS = new Set([
   'open_cursor',
@@ -39,6 +43,59 @@ const safeRate = (numerator, denominator) => {
   return Number((numerator / denominator).toFixed(6));
 };
 
+const normalizeWrongClickToBoolean = (value, rowIndex) => {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  if (typeof value === 'number' && Number.isFinite(value) && value >= 0) {
+    return value > 0;
+  }
+
+  throw new Error(
+    `Invalid raw-run row ${rowIndex + 1}: 'wrongClick' must be boolean or non-negative number`,
+  );
+};
+
+const parseRepoFromRemote = (remoteUrl) => {
+  const trimmed = remoteUrl.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const scpLikeMatch = trimmed.match(/^[^@]+@[^:]+:([^\s]+?)(?:\.git)?$/);
+  if (scpLikeMatch?.[1]) {
+    return scpLikeMatch[1].replace(/^\/+/, '');
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    const repoPath = parsed.pathname
+      .replace(/^\/+/, '')
+      .replace(/\.git$/, '');
+    return repoPath || null;
+  } catch {
+    return null;
+  }
+};
+
+const resolveRepoIdentity = async (explicitRepo) => {
+  if (typeof explicitRepo === 'string' && explicitRepo.trim()) {
+    return explicitRepo.trim();
+  }
+
+  try {
+    const { stdout } = await execFileAsync('git', [
+      'config',
+      '--get',
+      'remote.origin.url',
+    ]);
+    return parseRepoFromRemote(stdout) || 'unknown';
+  } catch {
+    return 'unknown';
+  }
+};
+
 const ensureRow = (row, rowIndex) => {
   const requiredStringFields = [
     'runId',
@@ -62,11 +119,9 @@ const ensureRow = (row, rowIndex) => {
     );
   }
 
-  const requiredBooleanFields = [
-    'wrongClick',
-    'maxLoopTermination',
-    'authHardFailure',
-  ];
+  normalizeWrongClickToBoolean(row.wrongClick, rowIndex);
+
+  const requiredBooleanFields = ['maxLoopTermination', 'authHardFailure'];
 
   for (const field of requiredBooleanFields) {
     if (typeof row[field] !== 'boolean') {
@@ -107,7 +162,7 @@ const main = async () => {
 
   if (!rawPath || !outputPath) {
     throw new Error(
-      'Usage: node scripts/reliability/compute-kpi-report.mjs --raw <raw.ndjson> --out <report.json> [--runId <id>] [--commit <sha>] [--provider <name>] [--model <name>] [--runType <baseline|gate>] [--minSampleCount <n>]',
+      'Usage: node scripts/reliability/compute-kpi-report.mjs --raw <raw.ndjson> --out <report.json> [--runId <id>] [--repo <owner/repo>] [--commit <sha>] [--provider <name>] [--model <name>] [--runType <baseline|gate>] [--minSampleCount <n>]',
     );
   }
 
@@ -118,7 +173,9 @@ const main = async () => {
     (row) => row.openAppFirstAttemptSuccess === true,
   ).length;
 
-  const wrongClickCount = rows.filter((row) => row.wrongClick === true).length;
+  const normalizedWrongClickCount = rows.filter((row, rowIndex) => {
+    return normalizeWrongClickToBoolean(row.wrongClick, rowIndex);
+  }).length;
 
   const maxLoopCount = rows.filter(
     (row) => row.maxLoopTermination === true,
@@ -132,13 +189,15 @@ const main = async () => {
     openAppSuccessCount,
     openAppRows.length,
   );
-  const wrongClickRate = safeRate(wrongClickCount, rows.length);
+  const wrongClickRate = safeRate(normalizedWrongClickCount, rows.length);
   const maxLoopTerminationRate = safeRate(maxLoopCount, rows.length);
   const authHardFailureRate = safeRate(authHardFailureCount, rows.length);
 
   const minSampleCount = Number.isFinite(Number(args.minSampleCount))
     ? Math.max(1, Number(args.minSampleCount))
     : DEFAULT_MIN_SAMPLE_COUNT;
+
+  const repoIdentity = await resolveRepoIdentity(args.repo);
 
   const openAppPass =
     openAppFirstAttemptSuccessRate !== null && openAppFirstAttemptSuccessRate >= 0.95;
@@ -169,7 +228,7 @@ const main = async () => {
     environment: {
       platform: args.platform || process.platform,
       git: {
-        repo: 'Proven1902/UI-TARS-desktop',
+        repo: repoIdentity,
         branch: args.branch || 'main',
         commit: args.commit || 'unknown',
       },
