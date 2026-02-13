@@ -55,6 +55,11 @@ node scripts/reliability/collect-kpi-raw-runs.mjs \
 ```
 
 This harness emits command-level run rows with fixed provenance and reliability flags.
+Probe semantics are fail-closed:
+
+- `open_cursor` fails when Cursor is missing or launch fails
+- `open_settings` fails when `Start-Process ms-settings:` errors
+- `focus_existing_browser_window` fails when no target browser window is activated
 
 ## Generate KPI report from raw runs
 

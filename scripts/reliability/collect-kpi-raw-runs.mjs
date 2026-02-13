@@ -118,7 +118,7 @@ const runPowerShellCommand = async (command, timeoutMs = 10_000) => {
 
 const runOpenCursorScenario = async () => {
   const probe = await runPowerShellCommand(
-    "$cursor = Get-Command cursor -ErrorAction SilentlyContinue; if ($cursor) { Start-Process cursor; exit 0 }; Start-Process notepad.exe; exit 0",
+    "$cursor = Get-Command cursor -ErrorAction SilentlyContinue; if (-not $cursor) { Write-Error 'CURSOR_NOT_FOUND'; exit 3 }; try { Start-Process cursor -ErrorAction Stop; exit 0 } catch { Write-Error $_; exit 4 }",
     15_000,
   );
 
@@ -131,7 +131,7 @@ const runOpenCursorScenario = async () => {
 
 const runOpenSettingsScenario = async () => {
   const probe = await runPowerShellCommand(
-    'Start-Process ms-settings:; exit 0',
+    "try { Start-Process 'ms-settings:' -ErrorAction Stop; exit 0 } catch { Write-Error $_; exit 3 }",
     10_000,
   );
 
@@ -144,7 +144,7 @@ const runOpenSettingsScenario = async () => {
 
 const runFocusExistingBrowserScenario = async () => {
   const probe = await runPowerShellCommand(
-    "$wshell = New-Object -ComObject WScript.Shell; if ($wshell.AppActivate('msedge')) { exit 0 }; if ($wshell.AppActivate('chrome')) { exit 0 }; if ($wshell.AppActivate('firefox')) { exit 0 }; exit 0",
+    "try { $wshell = New-Object -ComObject WScript.Shell; if ($wshell.AppActivate('msedge')) { exit 0 }; if ($wshell.AppActivate('chrome')) { exit 0 }; if ($wshell.AppActivate('firefox')) { exit 0 }; Write-Error 'BROWSER_WINDOW_NOT_FOUND'; exit 3 } catch { Write-Error $_; exit 4 }",
     10_000,
   );
 
