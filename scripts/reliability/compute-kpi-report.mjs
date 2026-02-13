@@ -35,6 +35,15 @@ const parseArgs = () => {
   return result;
 };
 
+const getRequiredArg = (args, key) => {
+  const value = args[key];
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new Error(`Missing required argument --${key}`);
+  }
+
+  return value.trim();
+};
+
 const safeRate = (numerator, denominator) => {
   if (!Number.isFinite(denominator) || denominator <= 0) {
     return null;
@@ -166,6 +175,11 @@ const main = async () => {
     );
   }
 
+  const branch = getRequiredArg(args, 'branch');
+  const commit = getRequiredArg(args, 'commit');
+  const provider = getRequiredArg(args, 'provider');
+  const model = getRequiredArg(args, 'model');
+
   const rows = await readRawRuns(rawPath);
 
   const openAppRows = rows.filter((row) => OPEN_APP_SCENARIO_IDS.has(row.scenarioId));
@@ -198,6 +212,11 @@ const main = async () => {
     : DEFAULT_MIN_SAMPLE_COUNT;
 
   const repoIdentity = await resolveRepoIdentity(args.repo);
+  if (!repoIdentity || repoIdentity === 'unknown') {
+    throw new Error(
+      'Unable to resolve repository identity. Provide --repo <owner/repo>.',
+    );
+  }
 
   const openAppPass =
     openAppFirstAttemptSuccessRate !== null && openAppFirstAttemptSuccessRate >= 0.95;
@@ -229,12 +248,12 @@ const main = async () => {
       platform: args.platform || process.platform,
       git: {
         repo: repoIdentity,
-        branch: args.branch || 'main',
-        commit: args.commit || 'unknown',
+        branch,
+        commit,
       },
       model: {
-        provider: args.provider || 'unknown',
-        name: args.model || 'unknown',
+        provider,
+        name: model,
       },
     },
     metrics: {

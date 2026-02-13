@@ -41,6 +41,58 @@ const getRunId = (report) => {
   return null;
 };
 
+const getRequiredMetadata = (report, reportLabel) => {
+  const gitRepo = report?.environment?.git?.repo;
+  const gitBranch = report?.environment?.git?.branch;
+  const gitCommit = report?.environment?.git?.commit;
+  const modelProvider = report?.environment?.model?.provider;
+  const modelName = report?.environment?.model?.name;
+
+  const requiredEntries = [
+    ['environment.git.repo', gitRepo],
+    ['environment.git.branch', gitBranch],
+    ['environment.git.commit', gitCommit],
+    ['environment.model.provider', modelProvider],
+    ['environment.model.name', modelName],
+  ];
+
+  for (const [field, value] of requiredEntries) {
+    if (typeof value !== 'string' || value.trim().length === 0) {
+      throw new Error(`${reportLabel} is missing required ${field}`);
+    }
+  }
+
+  return {
+    gitRepo,
+    gitBranch,
+    gitCommit,
+    modelProvider,
+    modelName,
+  };
+};
+
+const ensureMatchingMetadata = (firstMeta, secondMeta) => {
+  const checks = [
+    ['environment.git.repo', firstMeta.gitRepo, secondMeta.gitRepo],
+    ['environment.git.branch', firstMeta.gitBranch, secondMeta.gitBranch],
+    ['environment.git.commit', firstMeta.gitCommit, secondMeta.gitCommit],
+    [
+      'environment.model.provider',
+      firstMeta.modelProvider,
+      secondMeta.modelProvider,
+    ],
+    ['environment.model.name', firstMeta.modelName, secondMeta.modelName],
+  ];
+
+  for (const [field, firstValue, secondValue] of checks) {
+    if (firstValue !== secondValue) {
+      throw new Error(
+        `KPI gate requires matching ${field} across both reports ('${firstValue}' vs '${secondValue}')`,
+      );
+    }
+  }
+};
+
 const main = async () => {
   const args = parseArgs();
   const firstPath = args.first;
@@ -74,6 +126,10 @@ const main = async () => {
       `KPI gate requires different runId values (both were '${firstRunId}')`,
     );
   }
+
+  const firstMetadata = getRequiredMetadata(first, 'first report');
+  const secondMetadata = getRequiredMetadata(second, 'second report');
+  ensureMatchingMetadata(firstMetadata, secondMetadata);
 
   const firstPass = isPassingReport(first);
   const secondPass = isPassingReport(second);
