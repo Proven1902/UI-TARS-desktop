@@ -109,3 +109,7 @@ The gate checker rejects:
   - `2026-02-13-gate-run-004.report.json`
   - `2026-02-13-gate-run-003-004.gate.json`
   - `2026-02-13-gate-run-003-004.summary.md`
+- Rollback and regression evidence:
+  - `2026-02-13-rollback-rehearsal-002.md`
+  - `2026-02-13-phase-regression-evidence.md`
+  - `2026-02-13-final-approval-note.md`

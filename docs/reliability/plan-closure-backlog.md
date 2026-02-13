@@ -1,6 +1,6 @@
 # UI-TARS Migration Plan Closure Backlog
 
-Last updated: 2026-02-13 (post-PR-22 merge, evidence capture in progress)
+Last updated: 2026-02-13 (evidence set captured; waiting PR-23 merge)
 Related matrix: `docs/reliability/migration-traceability-matrix.md`
 
 ## Goal
@@ -34,7 +34,9 @@ Close all remaining non-code evidence gaps so the migration plan can be marked c
    - Attach exact run commands/configs and timestamps.
 
 3. **Rollback rehearsal evidence for phase/global DoD**
-   - Progress: first test-level rollback rehearsal artifact exists (`2026-02-13-baseline-run-001.rollback.md`); full flag-set rehearsal package still pending.
+   - Progress: completed with explicit artifact set:
+     - `2026-02-13-rollback-rehearsal-002.md`
+     - `2026-02-13-rollback-rehearsal.log`
    - Execute explicit rollback rehearsal for currently used reliability flags:
      - `ffToolRegistry`, `ffInvokeGate`, `ffToolFirstRouting`, `ffConfidenceLayer`, `ffLoopGuardrails`
    - Prove fallback behavior for new sessions when flags are disabled.
@@ -59,9 +61,7 @@ Close all remaining non-code evidence gaps so the migration plan can be marked c
 
 ## Remaining closure delta
 
-- Complete full rollback rehearsal evidence for active reliability flags.
-- Attach explicit no-regression smoke/e2e evidence for P0/P1.
-- Publish final approval note with links to merged PRs, reports, and rollback logs.
+- Merge `#23` (measured evidence PR) to move final approval note from blocked to approved on `main`.
 
 ## Notes
 

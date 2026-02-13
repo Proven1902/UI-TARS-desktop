@@ -112,3 +112,9 @@ Reason: `<short reason>`
 - summaries:
   - `docs/reliability/artifacts/2026-02-13-baseline-run-002.summary.md`
   - `docs/reliability/artifacts/2026-02-13-gate-run-003-004.summary.md`
+- rollback rehearsal:
+  - `docs/reliability/artifacts/2026-02-13-rollback-rehearsal-002.md`
+- phase regression evidence:
+  - `docs/reliability/artifacts/2026-02-13-phase-regression-evidence.md`
+- final approval note:
+  - `docs/reliability/artifacts/2026-02-13-final-approval-note.md`

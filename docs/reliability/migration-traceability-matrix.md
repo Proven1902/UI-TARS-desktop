@@ -47,7 +47,7 @@ Plan PR IDs and GitHub PR numbers are different namespaces.
 | Closure-PR-A | #20 | `929ecc3e` | Merged | Traceability + baseline scaffolding updates in reliability docs/artifacts |
 | Closure-PR-B | #21 | `1f8c5bbf` | Merged | KPI automation scripts + provenance/gate hardening (`scripts/reliability/*.mjs`) |
 | Closure-PR-C | #22 | `ce12f957` | Merged | Final operations/sign-off docs and readiness checklist snapshot |
-| Closure-PR-D | Pending | N/A | In progress | Measured KPI evidence capture and final sign-off delta closure |
+| Closure-PR-D | #23 | Pending | In review | Measured KPI evidence capture, rollback rehearsal evidence, and final sign-off bundle |
 
 ## DoD/evidence status (post-PR-22)
 
@@ -55,6 +55,4 @@ Plan PR IDs and GitHub PR numbers are different namespaces.
 - Closure automation: KPI compute/gate scripts merged and hardened in `#21`.
 - Measured KPI evidence: baseline + two consecutive passing gate runs captured in 2026-02-13 artifact set.
 - Missing completion evidence from plan:
-  - Explicit rollback rehearsal artifacts for phase/global DoD.
-  - Explicit no-regression smoke/e2e evidence attachment for final checklist sign-off.
-  - Final sign-off completion with real run artifacts and approval note links.
+  - Final on-main sign-off confirmation after `#23` merge.
