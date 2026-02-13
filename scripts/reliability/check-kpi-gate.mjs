@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import fs from 'node:fs/promises';
+import path from 'node:path';
 
 const parseArgs = () => {
   const args = process.argv.slice(2);
@@ -27,8 +28,17 @@ const readReport = async (filePath) => {
 const isPassingReport = (report) => {
   return (
     report?.executionStatus?.state === 'executed' &&
+    report?.targetResult?.coveragePass === true &&
     report?.targetResult?.allPass === true
   );
+};
+
+const getRunId = (report) => {
+  if (typeof report?.scope?.runId === 'string' && report.scope.runId.trim()) {
+    return report.scope.runId;
+  }
+
+  return null;
 };
 
 const main = async () => {
@@ -42,10 +52,28 @@ const main = async () => {
     );
   }
 
+  const firstResolvedPath = path.resolve(firstPath);
+  const secondResolvedPath = path.resolve(secondPath);
+  if (firstResolvedPath === secondResolvedPath) {
+    throw new Error('KPI gate requires two distinct report files');
+  }
+
   const [first, second] = await Promise.all([
     readReport(firstPath),
     readReport(secondPath),
   ]);
+
+  const firstRunId = getRunId(first);
+  const secondRunId = getRunId(second);
+  if (!firstRunId || !secondRunId) {
+    throw new Error('Each KPI report must include a non-empty scope.runId');
+  }
+
+  if (firstRunId === secondRunId) {
+    throw new Error(
+      `KPI gate requires different runId values (both were '${firstRunId}')`,
+    );
+  }
 
   const firstPass = isPassingReport(first);
   const secondPass = isPassingReport(second);
@@ -57,10 +85,12 @@ const main = async () => {
     reports: {
       first: {
         path: firstPath,
+        runId: firstRunId,
         ok: firstPass,
       },
       second: {
         path: secondPath,
+        runId: secondRunId,
         ok: secondPass,
       },
     },

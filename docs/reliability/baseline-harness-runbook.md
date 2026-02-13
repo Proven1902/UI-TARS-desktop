@@ -68,7 +68,9 @@ For each measurement batch produce:
 node scripts/reliability/compute-kpi-report.mjs \
   --raw docs/reliability/artifacts/<timestamp>-raw-runs.ndjson \
   --out docs/reliability/artifacts/<timestamp>-report.json \
+  --runId <run-id> \
   --runType gate \
+  --minSampleCount 200 \
   --branch main \
   --commit <commit-sha> \
   --provider <provider-name> \
@@ -80,6 +82,11 @@ node scripts/reliability/check-kpi-gate.mjs \
   --first docs/reliability/artifacts/<run-1>.report.json \
   --second docs/reliability/artifacts/<run-2>.report.json
 ```
+
+The report must fail coverage when either condition is not met:
+
+- sample count is below target (`200` by default)
+- one or more canonical scenarios are missing from the batch
 
 ## 6. Acceptance thresholds
 

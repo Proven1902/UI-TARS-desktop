@@ -10,6 +10,8 @@ const CANONICAL_SCENARIO_IDS = new Set([
   'recover_from_intentional_timeout',
 ]);
 
+const DEFAULT_MIN_SAMPLE_COUNT = 200;
+
 const OPEN_APP_SCENARIO_IDS = new Set(['open_cursor', 'open_settings']);
 
 const parseArgs = () => {
@@ -27,18 +29,6 @@ const parseArgs = () => {
   }
 
   return result;
-};
-
-const toBooleanOrNull = (value) => {
-  if (value === true || value === false) {
-    return value;
-  }
-
-  if (typeof value === 'number') {
-    return value > 0;
-  }
-
-  return null;
 };
 
 const safeRate = (numerator, denominator) => {
@@ -71,6 +61,29 @@ const ensureRow = (row, rowIndex) => {
       `Invalid raw-run row ${rowIndex + 1}: unknown scenarioId '${row.scenarioId}'`,
     );
   }
+
+  const requiredBooleanFields = [
+    'wrongClick',
+    'maxLoopTermination',
+    'authHardFailure',
+  ];
+
+  for (const field of requiredBooleanFields) {
+    if (typeof row[field] !== 'boolean') {
+      throw new Error(
+        `Invalid raw-run row ${rowIndex + 1}: '${field}' must be boolean`,
+      );
+    }
+  }
+
+  if (
+    OPEN_APP_SCENARIO_IDS.has(row.scenarioId) &&
+    typeof row.openAppFirstAttemptSuccess !== 'boolean'
+  ) {
+    throw new Error(
+      `Invalid raw-run row ${rowIndex + 1}: 'openAppFirstAttemptSuccess' must be boolean for ${row.scenarioId}`,
+    );
+  }
 };
 
 const readRawRuns = async (rawPath) => {
@@ -94,62 +107,60 @@ const main = async () => {
 
   if (!rawPath || !outputPath) {
     throw new Error(
-      'Usage: node scripts/reliability/compute-kpi-report.mjs --raw <raw.ndjson> --out <report.json> [--commit <sha>] [--provider <name>] [--model <name>] [--runType <baseline|gate>]',
+      'Usage: node scripts/reliability/compute-kpi-report.mjs --raw <raw.ndjson> --out <report.json> [--runId <id>] [--commit <sha>] [--provider <name>] [--model <name>] [--runType <baseline|gate>] [--minSampleCount <n>]',
     );
   }
 
   const rows = await readRawRuns(rawPath);
 
   const openAppRows = rows.filter((row) => OPEN_APP_SCENARIO_IDS.has(row.scenarioId));
-  const openAppKnown = openAppRows.filter(
-    (row) => typeof row.openAppFirstAttemptSuccess === 'boolean',
-  );
-  const openAppSuccessCount = openAppKnown.filter(
+  const openAppSuccessCount = openAppRows.filter(
     (row) => row.openAppFirstAttemptSuccess === true,
   ).length;
 
-  const wrongClickKnown = rows
-    .map((row) => toBooleanOrNull(row.wrongClick))
-    .filter((value) => value !== null);
-  const wrongClickCount = wrongClickKnown.filter((value) => value === true).length;
+  const wrongClickCount = rows.filter((row) => row.wrongClick === true).length;
 
-  const maxLoopKnown = rows
-    .map((row) => toBooleanOrNull(row.maxLoopTermination))
-    .filter((value) => value !== null);
-  const maxLoopCount = maxLoopKnown.filter((value) => value === true).length;
+  const maxLoopCount = rows.filter(
+    (row) => row.maxLoopTermination === true,
+  ).length;
 
-  const authHardFailureKnown = rows
-    .map((row) => toBooleanOrNull(row.authHardFailure))
-    .filter((value) => value !== null);
-  const authHardFailureCount = authHardFailureKnown.filter(
-    (value) => value === true,
+  const authHardFailureCount = rows.filter(
+    (row) => row.authHardFailure === true,
   ).length;
 
   const openAppFirstAttemptSuccessRate = safeRate(
     openAppSuccessCount,
-    openAppKnown.length,
+    openAppRows.length,
   );
-  const wrongClickRate = safeRate(wrongClickCount, wrongClickKnown.length);
-  const maxLoopTerminationRate = safeRate(maxLoopCount, maxLoopKnown.length);
-  const authHardFailureRate = safeRate(
-    authHardFailureCount,
-    authHardFailureKnown.length,
-  );
+  const wrongClickRate = safeRate(wrongClickCount, rows.length);
+  const maxLoopTerminationRate = safeRate(maxLoopCount, rows.length);
+  const authHardFailureRate = safeRate(authHardFailureCount, rows.length);
+
+  const minSampleCount = Number.isFinite(Number(args.minSampleCount))
+    ? Math.max(1, Number(args.minSampleCount))
+    : DEFAULT_MIN_SAMPLE_COUNT;
 
   const openAppPass =
     openAppFirstAttemptSuccessRate !== null && openAppFirstAttemptSuccessRate >= 0.95;
   const wrongClickPass = wrongClickRate !== null && wrongClickRate < 0.01;
-  const allPass = openAppPass && wrongClickPass;
-
   const scenarioCounts = rows.reduce((accumulator, row) => {
     accumulator[row.scenarioId] = (accumulator[row.scenarioId] || 0) + 1;
     return accumulator;
   }, {});
 
+  const missingScenarioIds = [...CANONICAL_SCENARIO_IDS].filter(
+    (scenarioId) => !scenarioCounts[scenarioId],
+  );
+  const sampleCountPass = rows.length >= minSampleCount;
+  const scenarioCoveragePass = missingScenarioIds.length === 0;
+  const coveragePass = sampleCountPass && scenarioCoveragePass;
+  const allPass = openAppPass && wrongClickPass && coveragePass;
+
   const report = {
     reportVersion: 'v1',
     generatedAt: new Date().toISOString(),
     scope: {
+      runId: args.runId || path.parse(outputPath).name,
       runType: args.runType || 'baseline',
       sampleCount: rows.length,
       scenarios: [...CANONICAL_SCENARIO_IDS],
@@ -180,6 +191,11 @@ const main = async () => {
     targetResult: {
       openAppFirstAttemptSuccessRatePass: openAppPass,
       wrongClickRatePass: wrongClickPass,
+      sampleCountPass,
+      scenarioCoveragePass,
+      coveragePass,
+      minSampleCount,
+      missingScenarioIds,
       allPass,
     },
     executionStatus: {

@@ -17,7 +17,9 @@ Use these IDs consistently in raw runs (`scenarioId`):
 node scripts/reliability/compute-kpi-report.mjs \
   --raw docs/reliability/artifacts/<timestamp>-raw-runs.ndjson \
   --out docs/reliability/artifacts/<timestamp>-report.json \
+  --runId <run-id> \
   --runType gate \
+  --minSampleCount 200 \
   --branch main \
   --commit <commit-sha> \
   --provider <provider-name> \
@@ -33,3 +35,9 @@ node scripts/reliability/check-kpi-gate.mjs \
 ```
 
 Exit code `0` means both reports passed and the gate is green.
+
+The gate checker rejects:
+
+- duplicated `--first/--second` report path
+- duplicated `scope.runId` values
+- reports without full coverage pass
