@@ -3,6 +3,14 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
+const RELIABILITY_FLAG_FIELDS = [
+  'ffToolRegistry',
+  'ffInvokeGate',
+  'ffToolFirstRouting',
+  'ffConfidenceLayer',
+  'ffLoopGuardrails',
+];
+
 const parseArgs = () => {
   const args = process.argv.slice(2);
   const result = {};
@@ -74,6 +82,50 @@ const getRequiredMetadata = (report, reportLabel) => {
   };
 };
 
+const getRequiredFeatureFlags = (report, reportLabel) => {
+  const featureFlags = {};
+
+  for (const fieldName of RELIABILITY_FLAG_FIELDS) {
+    const value = report?.environment?.featureFlags?.[fieldName];
+    if (typeof value !== 'boolean') {
+      throw new Error(
+        `${reportLabel} is missing required environment.featureFlags.${fieldName}`,
+      );
+    }
+    featureFlags[fieldName] = value;
+  }
+
+  return featureFlags;
+};
+
+const ensureMatchingFeatureFlags = (firstFlags, secondFlags) => {
+  for (const fieldName of RELIABILITY_FLAG_FIELDS) {
+    if (firstFlags[fieldName] !== secondFlags[fieldName]) {
+      throw new Error(
+        `KPI gate requires matching environment.featureFlags.${fieldName} across both reports ('${firstFlags[fieldName]}' vs '${secondFlags[fieldName]}')`,
+      );
+    }
+  }
+};
+
+const getRequiredRawRunsPath = (report, reportLabel) => {
+  const rawRunsPath = report?.executionStatus?.rawRunsPath;
+  if (typeof rawRunsPath !== 'string' || rawRunsPath.trim().length === 0) {
+    throw new Error(`${reportLabel} is missing required executionStatus.rawRunsPath`);
+  }
+
+  return rawRunsPath.trim();
+};
+
+const normalizePathForComparison = (filePath) => {
+  const resolvedPath = path.resolve(filePath);
+  if (process.platform === 'win32') {
+    return resolvedPath.toLowerCase();
+  }
+
+  return resolvedPath;
+};
+
 const ensureMatchingMetadata = (firstMeta, secondMeta) => {
   const checks = [
     ['environment.git.repo', firstMeta.gitRepo, secondMeta.gitRepo],
@@ -135,6 +187,21 @@ const main = async () => {
   const secondMetadata = getRequiredMetadata(second, 'second report');
   ensureMatchingMetadata(firstMetadata, secondMetadata);
 
+  const firstFeatureFlags = getRequiredFeatureFlags(first, 'first report');
+  const secondFeatureFlags = getRequiredFeatureFlags(second, 'second report');
+  ensureMatchingFeatureFlags(firstFeatureFlags, secondFeatureFlags);
+
+  const firstRawRunsPath = getRequiredRawRunsPath(first, 'first report');
+  const secondRawRunsPath = getRequiredRawRunsPath(second, 'second report');
+  if (
+    normalizePathForComparison(firstRawRunsPath) ===
+    normalizePathForComparison(secondRawRunsPath)
+  ) {
+    throw new Error(
+      `KPI gate requires different executionStatus.rawRunsPath values (both resolved to '${firstRawRunsPath}')`,
+    );
+  }
+
   const firstPass = isPassingReport(first);
   const secondPass = isPassingReport(second);
   const gatePass = firstPass && secondPass;
@@ -146,11 +213,13 @@ const main = async () => {
       first: {
         path: firstPath,
         runId: firstRunId,
+        rawRunsPath: firstRawRunsPath,
         ok: firstPass,
       },
       second: {
         path: secondPath,
         runId: secondRunId,
+        rawRunsPath: secondRawRunsPath,
         ok: secondPass,
       },
     },

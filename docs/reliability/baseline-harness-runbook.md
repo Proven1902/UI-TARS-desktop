@@ -114,6 +114,12 @@ The two-run gate check must also fail if provenance metadata differs between rep
 - `environment.model.name`
 - `environment.app.version`
 
+The two-run gate check must also fail when:
+
+- `environment.featureFlags` values differ between reports (`ffToolRegistry`, `ffInvokeGate`, `ffToolFirstRouting`, `ffConfidenceLayer`, `ffLoopGuardrails`)
+- `executionStatus.rawRunsPath` is missing on either report
+- both reports reference the same raw-runs evidence path (including equivalent resolved paths)
+
 ## 6. Acceptance thresholds
 
 Use these plan thresholds for readiness evaluation:

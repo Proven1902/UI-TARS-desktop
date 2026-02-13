@@ -64,7 +64,9 @@ The gate checker rejects:
 
 - duplicated `--first/--second` report path
 - duplicated `scope.runId` values
+- duplicated `executionStatus.rawRunsPath` values (including equivalent resolved paths)
 - mismatched build/model provenance fields across reports (`environment.git.*`, `environment.model.*`, `environment.app.version`)
+- mismatched reliability feature flags across reports (`environment.featureFlags.ffToolRegistry`, `ffInvokeGate`, `ffToolFirstRouting`, `ffConfidenceLayer`, `ffLoopGuardrails`)
 - reports without full coverage pass
 
 `minSampleCount` is clamped to at least `200` (runbook minimum), even if a lower value is passed.
