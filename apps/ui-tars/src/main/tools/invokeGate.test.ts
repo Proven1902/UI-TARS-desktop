@@ -239,7 +239,7 @@ describe('invokeGate', () => {
 
   it('denies host-unsupported tool-only action types', () => {
     withMockedPlatform('linux', () => {
-      const toolIntent = buildActionIntentV1({
+      const windowFocusIntent = buildActionIntentV1({
         sessionId: 'session-5c',
         parsedPrediction: {
           action_type: 'window.focus',
@@ -248,8 +248,17 @@ describe('invokeGate', () => {
           thought: 'focus on unsupported host',
         },
       });
+      const appLaunchCursorIntent = buildActionIntentV1({
+        sessionId: 'session-5d',
+        parsedPrediction: {
+          action_type: 'app.launch',
+          action_inputs: { content: 'cursor' },
+          reflection: null,
+          thought: 'launch unsupported target on host',
+        },
+      });
 
-      const toolDecision = evaluateInvokeGate(toolIntent, {
+      const windowFocusDecision = evaluateInvokeGate(windowFocusIntent, {
         featureFlags: {
           ffToolRegistry: true,
           ffInvokeGate: true,
@@ -258,9 +267,27 @@ describe('invokeGate', () => {
         authState: 'valid',
         loopBudgetRemaining: 10,
       });
+      const appLaunchCursorDecision = evaluateInvokeGate(
+        appLaunchCursorIntent,
+        {
+          featureFlags: {
+            ffToolRegistry: true,
+            ffInvokeGate: true,
+            ffToolFirstRouting: true,
+          },
+          authState: 'valid',
+          loopBudgetRemaining: 10,
+        },
+      );
 
-      expect(toolDecision.decision).toBe('deny');
-      expect(toolDecision.reasonCodes).toContain('action_type_unsupported');
+      expect(windowFocusDecision.decision).toBe('deny');
+      expect(windowFocusDecision.reasonCodes).toContain(
+        'action_type_unsupported',
+      );
+      expect(appLaunchCursorDecision.decision).toBe('deny');
+      expect(appLaunchCursorDecision.reasonCodes).toContain(
+        'action_type_unsupported',
+      );
     });
   });
 

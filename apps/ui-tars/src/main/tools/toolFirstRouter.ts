@@ -17,8 +17,10 @@ import {
   buildWindowWaitReadyToolCall,
   runWindowWaitReadyToolCall,
 } from './windowWaitReadyTool';
-
-type ToolFirstTarget = 'cursor' | 'settings' | 'notepad';
+import {
+  resolveToolFirstTarget,
+  type ToolFirstTarget,
+} from './toolFirstTarget';
 
 export type ToolFirstRouteResult = {
   handled: boolean;
@@ -51,46 +53,6 @@ const WINDOW_WAIT_READY_ACTION_TYPES = new Set<string>([
 
 const normalizeActionType = (actionType: string): string => {
   return actionType.trim().toLowerCase();
-};
-
-const resolveTarget = (
-  inputs: PredictionParsed['action_inputs'],
-): ToolFirstTarget | null => {
-  const args = (inputs || {}) as Record<string, unknown>;
-  const candidates = [
-    args.target_window,
-    args.targetWindow,
-    args.target_app,
-    args.targetApp,
-    args.target,
-    args.window,
-    args.app,
-    args.name,
-    args.content,
-  ];
-
-  for (const candidate of candidates) {
-    if (typeof candidate !== 'string') {
-      continue;
-    }
-
-    const normalized = candidate.trim().toLowerCase();
-    if (!normalized) {
-      continue;
-    }
-
-    if (normalized.includes('cursor')) {
-      return 'cursor';
-    }
-    if (normalized.includes('setting')) {
-      return 'settings';
-    }
-    if (normalized.includes('notepad') || normalized.includes('textedit')) {
-      return 'notepad';
-    }
-  }
-
-  return null;
 };
 
 const buildIdempotencyKey = (params: {
@@ -133,7 +95,9 @@ export const executeToolFirstRoute = async (
   const actionType = normalizeActionType(
     params.parsedPrediction.action_type || '',
   );
-  const target = resolveTarget(params.parsedPrediction.action_inputs);
+  const target = resolveToolFirstTarget(
+    params.parsedPrediction.action_inputs as Record<string, unknown>,
+  );
 
   if (
     !APP_LAUNCH_ACTION_TYPES.has(actionType) &&

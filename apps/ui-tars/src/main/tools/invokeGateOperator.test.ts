@@ -57,6 +57,27 @@ describe('InvokeGateOperator', () => {
     };
   };
 
+  const buildToolExecuteParams = (
+    actionType: string,
+    target: string,
+    loopCount?: number,
+  ) => {
+    return {
+      prediction: 'Action output',
+      parsedPrediction: {
+        action_type: actionType,
+        action_inputs: { content: target },
+        reflection: null,
+        thought: 'execute tool action',
+      },
+      loopCount,
+      screenWidth: 1920,
+      screenHeight: 1080,
+      scaleFactor: 1,
+      factors: [1, 1],
+    };
+  };
+
   const buildNavigateExecuteParams = () => {
     return {
       prediction: 'Action output',
@@ -258,7 +279,7 @@ describe('InvokeGateOperator', () => {
 
     await expect(
       gatedOperator.execute(
-        buildExecuteParams('app.launch', '[1,1,1,1]', 1) as never,
+        buildToolExecuteParams('app.launch', 'notepad', 1) as never,
       ),
     ).resolves.toEqual({ status: StatusEnum.RUNNING });
 
@@ -360,18 +381,18 @@ describe('InvokeGateOperator', () => {
 
     await expect(
       gatedOperator.execute(
-        buildExecuteParams('window.focus', '[1,1,1,1]', 1) as never,
+        buildToolExecuteParams('window.focus', 'cursor', 1) as never,
       ),
     ).resolves.toEqual({ status: StatusEnum.RUNNING });
     await expect(
       gatedOperator.execute(
-        buildExecuteParams('window.focus', '[1,1,1,1]', 1) as never,
+        buildToolExecuteParams('window.focus', 'cursor', 1) as never,
       ),
     ).resolves.toEqual({ status: StatusEnum.RUNNING });
 
     await expect(
       gatedOperator.execute(
-        buildExecuteParams('window.focus', '[1,1,1,1]', 2) as never,
+        buildToolExecuteParams('window.focus', 'cursor', 2) as never,
       ),
     ).rejects.toThrow('loop_budget_exhausted');
 
@@ -405,7 +426,7 @@ describe('InvokeGateOperator', () => {
 
     await expect(
       gatedOperator.execute(
-        buildExecuteParams('app.launch', '[1,1,1,1]', 1) as never,
+        buildToolExecuteParams('app.launch', 'notepad', 1) as never,
       ),
     ).rejects.toThrow('[TOOL_FIRST_ROUTE_UNHANDLED]');
 
@@ -413,5 +434,39 @@ describe('InvokeGateOperator', () => {
     expect(
       (innerOperator as never as { execute: ReturnType<typeof vi.fn> }).execute,
     ).not.toHaveBeenCalled();
+  });
+
+  it('skips tool-first routing when ffToolFirstRouting is disabled', async () => {
+    const innerOperator = createInnerOperator();
+    const toolFirstRouter = vi.fn().mockResolvedValue({
+      handled: true,
+      status: StatusEnum.RUNNING,
+      toolName: 'app.launch',
+      fallbackReason: null,
+    });
+
+    const gatedOperator = new InvokeGateOperator({
+      innerOperator,
+      featureFlags: {
+        ffToolRegistry: true,
+        ffInvokeGate: true,
+        ffToolFirstRouting: false,
+      },
+      sessionId: 'session-12',
+      authState: 'valid',
+      maxLoopCount: 5,
+      toolFirstRouter,
+    });
+
+    await expect(
+      gatedOperator.execute(
+        buildExecuteParams('click', '[1,1,1,1]', 1) as never,
+      ),
+    ).resolves.toEqual({ status: StatusEnum.RUNNING });
+
+    expect(toolFirstRouter).not.toHaveBeenCalled();
+    expect(
+      (innerOperator as never as { execute: ReturnType<typeof vi.fn> }).execute,
+    ).toHaveBeenCalledTimes(1);
   });
 });
