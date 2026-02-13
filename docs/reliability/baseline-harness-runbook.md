@@ -62,6 +62,25 @@ For each measurement batch produce:
 2. Aggregated report JSON (see template file)
 3. Short markdown summary with conclusions and known caveats
 
+### KPI automation commands
+
+```bash
+node scripts/reliability/compute-kpi-report.mjs \
+  --raw docs/reliability/artifacts/<timestamp>-raw-runs.ndjson \
+  --out docs/reliability/artifacts/<timestamp>-report.json \
+  --runType gate \
+  --branch main \
+  --commit <commit-sha> \
+  --provider <provider-name> \
+  --model <model-name>
+```
+
+```bash
+node scripts/reliability/check-kpi-gate.mjs \
+  --first docs/reliability/artifacts/<run-1>.report.json \
+  --second docs/reliability/artifacts/<run-2>.report.json
+```
+
 ## 6. Acceptance thresholds
 
 Use these plan thresholds for readiness evaluation:
