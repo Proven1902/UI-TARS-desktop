@@ -132,6 +132,8 @@ export const agentRoute = t.router({
     };
   }),
   clearHistory: t.procedure.input<void>().handle(async () => {
+    CheckpointRecoveryService.getInstance().clearCheckpoint();
+
     store.setState({
       status: StatusEnum.END,
       messages: [],
