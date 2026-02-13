@@ -301,4 +301,83 @@ describe('InvokeGateOperator', () => {
       (innerOperator as never as { execute: ReturnType<typeof vi.fn> }).execute,
     ).toHaveBeenCalledTimes(1);
   });
+
+  it('applies invoke-gate deny before running tool-first route', async () => {
+    const innerOperator = createInnerOperator();
+    const toolFirstRouter = vi.fn().mockResolvedValue({
+      handled: true,
+      status: StatusEnum.RUNNING,
+      toolName: 'app.launch',
+      fallbackReason: null,
+    });
+
+    const gatedOperator = new InvokeGateOperator({
+      innerOperator,
+      featureFlags: {
+        ffToolRegistry: true,
+        ffInvokeGate: true,
+        ffToolFirstRouting: true,
+      },
+      sessionId: 'session-9',
+      authState: 'valid',
+      maxLoopCount: 0,
+      toolFirstRouter,
+    });
+
+    await expect(
+      gatedOperator.execute(
+        buildExecuteParams('app.launch', '[1,1,1,1]', 1) as never,
+      ),
+    ).rejects.toThrow('loop_budget_exhausted');
+
+    expect(toolFirstRouter).not.toHaveBeenCalled();
+    expect(
+      (innerOperator as never as { execute: ReturnType<typeof vi.fn> }).execute,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('advances loop budget even when tool-first route handles action', async () => {
+    const innerOperator = createInnerOperator();
+    const toolFirstRouter = vi.fn().mockResolvedValue({
+      handled: true,
+      status: StatusEnum.RUNNING,
+      toolName: 'window.focus',
+      fallbackReason: null,
+    });
+
+    const gatedOperator = new InvokeGateOperator({
+      innerOperator,
+      featureFlags: {
+        ffToolRegistry: true,
+        ffInvokeGate: true,
+        ffToolFirstRouting: true,
+      },
+      sessionId: 'session-10',
+      authState: 'valid',
+      maxLoopCount: 1,
+      toolFirstRouter,
+    });
+
+    await expect(
+      gatedOperator.execute(
+        buildExecuteParams('window.focus', '[1,1,1,1]', 1) as never,
+      ),
+    ).resolves.toEqual({ status: StatusEnum.RUNNING });
+    await expect(
+      gatedOperator.execute(
+        buildExecuteParams('window.focus', '[1,1,1,1]', 1) as never,
+      ),
+    ).resolves.toEqual({ status: StatusEnum.RUNNING });
+
+    await expect(
+      gatedOperator.execute(
+        buildExecuteParams('window.focus', '[1,1,1,1]', 2) as never,
+      ),
+    ).rejects.toThrow('loop_budget_exhausted');
+
+    expect(toolFirstRouter).toHaveBeenCalledTimes(2);
+    expect(
+      (innerOperator as never as { execute: ReturnType<typeof vi.fn> }).execute,
+    ).not.toHaveBeenCalled();
+  });
 });

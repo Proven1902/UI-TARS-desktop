@@ -116,6 +116,8 @@ const getRiskTierByActionType = (actionType: string): ActionRiskTier => {
       'release',
       'navigate',
       'navigate_back',
+      'app.launch',
+      'app_launch',
       'drag',
       'left_click_drag',
     ].includes(actionType)
@@ -135,6 +137,8 @@ const getRiskTierByActionType = (actionType: string): ActionRiskTier => {
       'right_click',
       'right_single',
       'middle_click',
+      'window.focus',
+      'window_focus',
       'scroll',
       'select',
     ].includes(actionType)

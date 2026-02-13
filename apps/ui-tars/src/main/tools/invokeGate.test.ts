@@ -80,6 +80,51 @@ describe('invokeGate', () => {
     expect(decision.reasonCodes).toContain('auth_state_invalid');
   });
 
+  it('denies mutating tool actions when auth state is invalid', () => {
+    const appLaunchIntent = buildActionIntentV1({
+      sessionId: 'session-3b',
+      parsedPrediction: {
+        action_type: 'app.launch',
+        action_inputs: { content: 'notepad' },
+        reflection: null,
+        thought: 'launch app',
+      },
+    });
+    const windowFocusIntent = buildActionIntentV1({
+      sessionId: 'session-3c',
+      parsedPrediction: {
+        action_type: 'window.focus',
+        action_inputs: { content: 'cursor' },
+        reflection: null,
+        thought: 'focus window',
+      },
+    });
+
+    const appLaunchDecision = evaluateInvokeGate(appLaunchIntent, {
+      featureFlags: {
+        ffToolRegistry: true,
+        ffInvokeGate: true,
+        ffToolFirstRouting: true,
+      },
+      authState: 'invalid',
+      loopBudgetRemaining: 10,
+    });
+    const windowFocusDecision = evaluateInvokeGate(windowFocusIntent, {
+      featureFlags: {
+        ffToolRegistry: true,
+        ffInvokeGate: true,
+        ffToolFirstRouting: true,
+      },
+      authState: 'invalid',
+      loopBudgetRemaining: 10,
+    });
+
+    expect(appLaunchDecision.decision).toBe('deny');
+    expect(appLaunchDecision.reasonCodes).toContain('auth_state_invalid');
+    expect(windowFocusDecision.decision).toBe('deny');
+    expect(windowFocusDecision.reasonCodes).toContain('auth_state_invalid');
+  });
+
   it('allows modeled navigate/release/tool actions when invoke gate is enabled', () => {
     const flags = {
       ffToolRegistry: true,

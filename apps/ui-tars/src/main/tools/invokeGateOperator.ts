@@ -74,31 +74,6 @@ export class InvokeGateOperator extends Operator {
     const loopCount = (params as ExecuteParams & { loopCount?: number })
       .loopCount;
 
-    if (
-      this.featureFlags.ffToolFirstRouting &&
-      this.featureFlags.ffToolRegistry
-    ) {
-      const toolFirstResult = await this.toolFirstRouter({
-        sessionId: this.sessionId,
-        loopCount,
-        parsedPrediction: params.parsedPrediction,
-      });
-
-      if (toolFirstResult.handled) {
-        logger.info('[tool-first-routing] tool path handled action', {
-          actionType: params.parsedPrediction.action_type,
-          toolName: toolFirstResult.toolName,
-          status: toolFirstResult.status,
-        });
-        return { status: toolFirstResult.status };
-      }
-
-      logger.info('[tool-first-routing] fallback to visual operator', {
-        actionType: params.parsedPrediction.action_type,
-        fallbackReason: toolFirstResult.fallbackReason,
-      });
-    }
-
     if (this.featureFlags.ffInvokeGate) {
       this.advanceLoopBudget(loopCount);
     }
@@ -125,6 +100,31 @@ export class InvokeGateOperator extends Operator {
       throw new Error(
         `[INVOKE_GATE_DENY] ${gateDecision.reasonCodes.join(',')}`,
       );
+    }
+
+    if (
+      this.featureFlags.ffToolFirstRouting &&
+      this.featureFlags.ffToolRegistry
+    ) {
+      const toolFirstResult = await this.toolFirstRouter({
+        sessionId: this.sessionId,
+        loopCount,
+        parsedPrediction: params.parsedPrediction,
+      });
+
+      if (toolFirstResult.handled) {
+        logger.info('[tool-first-routing] tool path handled action', {
+          actionType: params.parsedPrediction.action_type,
+          toolName: toolFirstResult.toolName,
+          status: toolFirstResult.status,
+        });
+        return { status: toolFirstResult.status };
+      }
+
+      logger.info('[tool-first-routing] fallback to visual operator', {
+        actionType: params.parsedPrediction.action_type,
+        fallbackReason: toolFirstResult.fallbackReason,
+      });
     }
 
     return this.innerOperator.execute(params);
