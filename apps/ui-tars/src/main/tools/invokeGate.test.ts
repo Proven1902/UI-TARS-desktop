@@ -8,6 +8,18 @@ import { TOOL_FIRST_FEATURE_FLAG_DEFAULTS } from '@main/store/featureFlags';
 
 import { buildActionIntentV1, evaluateInvokeGate } from './invokeGate';
 
+const withMockedPlatform = <T>(platform: NodeJS.Platform, run: () => T): T => {
+  const descriptor = Object.getOwnPropertyDescriptor(process, 'platform');
+  Object.defineProperty(process, 'platform', { value: platform });
+  try {
+    return run();
+  } finally {
+    if (descriptor) {
+      Object.defineProperty(process, 'platform', descriptor);
+    }
+  }
+};
+
 describe('invokeGate', () => {
   it('allows when invoke gate flag is disabled', () => {
     const intent = buildActionIntentV1({
@@ -194,10 +206,10 @@ describe('invokeGate', () => {
     const toolIntent = buildActionIntentV1({
       sessionId: 'session-5b',
       parsedPrediction: {
-        action_type: 'window.focus',
-        action_inputs: { content: 'cursor' },
+        action_type: 'app.launch',
+        action_inputs: { content: 'notepad' },
         reflection: null,
-        thought: 'focus via tool',
+        thought: 'launch via tool',
       },
     });
 
@@ -223,6 +235,33 @@ describe('invokeGate', () => {
     expect(releaseDecision.reasonCodes).toEqual([]);
     expect(toolDecision.decision).toBe('allow');
     expect(toolDecision.reasonCodes).toEqual([]);
+  });
+
+  it('denies host-unsupported tool-only action types', () => {
+    withMockedPlatform('linux', () => {
+      const toolIntent = buildActionIntentV1({
+        sessionId: 'session-5c',
+        parsedPrediction: {
+          action_type: 'window.focus',
+          action_inputs: { content: 'cursor' },
+          reflection: null,
+          thought: 'focus on unsupported host',
+        },
+      });
+
+      const toolDecision = evaluateInvokeGate(toolIntent, {
+        featureFlags: {
+          ffToolRegistry: true,
+          ffInvokeGate: true,
+          ffToolFirstRouting: true,
+        },
+        authState: 'valid',
+        loopBudgetRemaining: 10,
+      });
+
+      expect(toolDecision.decision).toBe('deny');
+      expect(toolDecision.reasonCodes).toContain('action_type_unsupported');
+    });
   });
 
   it('accepts fractional loop budget values without schema failure', () => {

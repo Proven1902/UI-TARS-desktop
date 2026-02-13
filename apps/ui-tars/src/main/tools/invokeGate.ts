@@ -63,6 +63,18 @@ const TOOL_ONLY_ACTION_TYPES = new Set<string>([
   'window_wait_ready',
 ]);
 
+const TOOL_ONLY_ACTION_HOST_SUPPORT: Record<
+  string,
+  readonly NodeJS.Platform[]
+> = {
+  'app.launch': ['win32', 'darwin', 'linux'],
+  app_launch: ['win32', 'darwin', 'linux'],
+  'window.focus': ['win32', 'darwin'],
+  window_focus: ['win32', 'darwin'],
+  'window.wait_ready': ['win32', 'darwin', 'linux'],
+  window_wait_ready: ['win32', 'darwin', 'linux'],
+};
+
 const ACTION_TYPES_REQUIRING_START_BOX = new Set<string>([
   'mouse_move',
   'hover',
@@ -203,9 +215,12 @@ export const evaluateInvokeGate = (
   const toolRoutingEnabled =
     context.featureFlags.ffToolRegistry &&
     context.featureFlags.ffToolFirstRouting;
+  const toolHostSupported = isToolOnlyActionSupportedOnHost(intent.actionType);
   const actionSupported =
     SUPPORTED_ACTION_TYPES.has(intent.actionType) ||
-    (toolRoutingEnabled && TOOL_ONLY_ACTION_TYPES.has(intent.actionType));
+    (toolRoutingEnabled &&
+      TOOL_ONLY_ACTION_TYPES.has(intent.actionType) &&
+      toolHostSupported);
 
   if (intent.actionType && !actionSupported) {
     reasonCodes.push('action_type_unsupported');
@@ -235,4 +250,13 @@ export const evaluateInvokeGate = (
 
 export const isToolOnlyActionType = (actionType: string): boolean => {
   return TOOL_ONLY_ACTION_TYPES.has(actionType.trim().toLowerCase());
+};
+
+const isToolOnlyActionSupportedOnHost = (actionType: string): boolean => {
+  const normalized = actionType.trim().toLowerCase();
+  const supportedHosts = TOOL_ONLY_ACTION_HOST_SUPPORT[normalized];
+  if (!supportedHosts) {
+    return false;
+  }
+  return supportedHosts.includes(process.platform);
 };
