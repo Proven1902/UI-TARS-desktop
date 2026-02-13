@@ -43,3 +43,5 @@ The gate checker rejects:
 - duplicated `scope.runId` values
 - mismatched build/model provenance fields across reports (`environment.git.*`, `environment.model.*`)
 - reports without full coverage pass
+
+`minSampleCount` is clamped to at least `200` (runbook minimum), even if a lower value is passed.

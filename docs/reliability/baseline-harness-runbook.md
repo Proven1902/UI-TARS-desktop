@@ -89,6 +89,8 @@ The report must fail coverage when either condition is not met:
 - sample count is below target (`200` by default)
 - one or more canonical scenarios are missing from the batch
 
+The generator enforces a hard minimum of `200` runs for coverage (`--minSampleCount` cannot lower this floor).
+
 The two-run gate check must also fail if provenance metadata differs between reports:
 
 - `environment.git.repo`

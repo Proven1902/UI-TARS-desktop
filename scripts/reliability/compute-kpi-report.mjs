@@ -207,9 +207,11 @@ const main = async () => {
   const maxLoopTerminationRate = safeRate(maxLoopCount, rows.length);
   const authHardFailureRate = safeRate(authHardFailureCount, rows.length);
 
-  const minSampleCount = Number.isFinite(Number(args.minSampleCount))
-    ? Math.max(1, Number(args.minSampleCount))
-    : DEFAULT_MIN_SAMPLE_COUNT;
+  const requestedMinSampleCount = Number(args.minSampleCount);
+  const minSampleCount =
+    Number.isFinite(requestedMinSampleCount) && requestedMinSampleCount > 0
+      ? Math.max(DEFAULT_MIN_SAMPLE_COUNT, requestedMinSampleCount)
+      : DEFAULT_MIN_SAMPLE_COUNT;
 
   const repoIdentity = await resolveRepoIdentity(args.repo);
   if (!repoIdentity || repoIdentity === 'unknown') {
