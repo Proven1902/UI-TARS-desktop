@@ -69,6 +69,7 @@ node scripts/reliability/compute-kpi-report.mjs \
   --raw docs/reliability/artifacts/<timestamp>-raw-runs.ndjson \
   --out docs/reliability/artifacts/<timestamp>-report.json \
   --runId <run-id> \
+  --repo <owner/repo> \
   --runType gate \
   --minSampleCount 200 \
   --branch main \
@@ -87,6 +88,14 @@ The report must fail coverage when either condition is not met:
 
 - sample count is below target (`200` by default)
 - one or more canonical scenarios are missing from the batch
+
+The two-run gate check must also fail if provenance metadata differs between reports:
+
+- `environment.git.repo`
+- `environment.git.branch`
+- `environment.git.commit`
+- `environment.model.provider`
+- `environment.model.name`
 
 ## 6. Acceptance thresholds
 

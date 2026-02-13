@@ -18,6 +18,7 @@ node scripts/reliability/compute-kpi-report.mjs \
   --raw docs/reliability/artifacts/<timestamp>-raw-runs.ndjson \
   --out docs/reliability/artifacts/<timestamp>-report.json \
   --runId <run-id> \
+  --repo <owner/repo> \
   --runType gate \
   --minSampleCount 200 \
   --branch main \
@@ -40,4 +41,5 @@ The gate checker rejects:
 
 - duplicated `--first/--second` report path
 - duplicated `scope.runId` values
+- mismatched build/model provenance fields across reports (`environment.git.*`, `environment.model.*`)
 - reports without full coverage pass
