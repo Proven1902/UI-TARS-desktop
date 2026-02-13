@@ -1,7 +1,8 @@
 {
   "reportVersion": "v1",
-  "generatedAt": "2026-02-13T11:55:29.345Z",
+  "generatedAt": "2026-02-13T12:06:58.736Z",
   "scope": {
+    "runId": "baseline-run-001-generated",
     "runType": "baseline",
     "sampleCount": 1,
     "scenarios": [
@@ -27,10 +28,10 @@
     }
   },
   "metrics": {
-    "openAppFirstAttemptSuccessRate": null,
-    "wrongClickRate": null,
-    "maxLoopTerminationRate": null,
-    "authHardFailureRate": null
+    "openAppFirstAttemptSuccessRate": 0,
+    "wrongClickRate": 0,
+    "maxLoopTerminationRate": 0,
+    "authHardFailureRate": 0
   },
   "targets": {
     "openAppFirstAttemptSuccessRate": ">=0.95",
@@ -38,7 +39,16 @@
   },
   "targetResult": {
     "openAppFirstAttemptSuccessRatePass": false,
-    "wrongClickRatePass": false,
+    "wrongClickRatePass": true,
+    "sampleCountPass": false,
+    "scenarioCoveragePass": false,
+    "coveragePass": false,
+    "minSampleCount": 200,
+    "missingScenarioIds": [
+      "open_settings",
+      "focus_existing_browser_window",
+      "recover_from_intentional_timeout"
+    ],
     "allPass": false
   },
   "executionStatus": {
