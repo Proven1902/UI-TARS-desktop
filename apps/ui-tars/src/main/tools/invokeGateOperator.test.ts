@@ -233,4 +233,72 @@ describe('InvokeGateOperator', () => {
       (innerOperator as never as { execute: ReturnType<typeof vi.fn> }).execute,
     ).toHaveBeenCalledTimes(1);
   });
+
+  it('uses tool-first routing result when handled', async () => {
+    const innerOperator = createInnerOperator();
+    const toolFirstRouter = vi.fn().mockResolvedValue({
+      handled: true,
+      status: StatusEnum.RUNNING,
+      toolName: 'app.launch',
+      fallbackReason: null,
+    });
+
+    const gatedOperator = new InvokeGateOperator({
+      innerOperator,
+      featureFlags: {
+        ffToolRegistry: true,
+        ffInvokeGate: true,
+        ffToolFirstRouting: true,
+      },
+      sessionId: 'session-7',
+      authState: 'valid',
+      maxLoopCount: 5,
+      toolFirstRouter,
+    });
+
+    await expect(
+      gatedOperator.execute(
+        buildExecuteParams('app.launch', '[1,1,1,1]', 1) as never,
+      ),
+    ).resolves.toEqual({ status: StatusEnum.RUNNING });
+
+    expect(toolFirstRouter).toHaveBeenCalledTimes(1);
+    expect(
+      (innerOperator as never as { execute: ReturnType<typeof vi.fn> }).execute,
+    ).not.toHaveBeenCalled();
+  });
+
+  it('falls back to visual operator when tool-first route is not handled', async () => {
+    const innerOperator = createInnerOperator();
+    const toolFirstRouter = vi.fn().mockResolvedValue({
+      handled: false,
+      status: StatusEnum.RUNNING,
+      toolName: null,
+      fallbackReason: 'unsupported_action_type',
+    });
+
+    const gatedOperator = new InvokeGateOperator({
+      innerOperator,
+      featureFlags: {
+        ffToolRegistry: true,
+        ffInvokeGate: false,
+        ffToolFirstRouting: true,
+      },
+      sessionId: 'session-8',
+      authState: 'valid',
+      maxLoopCount: 5,
+      toolFirstRouter,
+    });
+
+    await expect(
+      gatedOperator.execute(
+        buildExecuteParams('click', '[1,1,1,1]', 1) as never,
+      ),
+    ).resolves.toEqual({ status: StatusEnum.RUNNING });
+
+    expect(toolFirstRouter).toHaveBeenCalledTimes(1);
+    expect(
+      (innerOperator as never as { execute: ReturnType<typeof vi.fn> }).execute,
+    ).toHaveBeenCalledTimes(1);
+  });
 });

@@ -17,6 +17,10 @@ import {
   buildActionIntentV1,
   evaluateInvokeGate,
 } from './invokeGate';
+import {
+  executeToolFirstRoute,
+  type ToolFirstRouteResult,
+} from './toolFirstRouter';
 
 type InvokeGateOperatorConfig = {
   innerOperator: Operator;
@@ -24,6 +28,11 @@ type InvokeGateOperatorConfig = {
   sessionId: string;
   authState: GateAuthState;
   maxLoopCount: number;
+  toolFirstRouter?: (params: {
+    sessionId: string;
+    loopCount?: number;
+    parsedPrediction: ExecuteParams['parsedPrediction'];
+  }) => Promise<ToolFirstRouteResult>;
 };
 
 export class InvokeGateOperator extends Operator {
@@ -35,6 +44,9 @@ export class InvokeGateOperator extends Operator {
   private readonly featureFlags: ToolFirstFeatureFlags;
   private readonly sessionId: string;
   private readonly authState: GateAuthState;
+  private readonly toolFirstRouter: NonNullable<
+    InvokeGateOperatorConfig['toolFirstRouter']
+  >;
   private remainingLoopBudget: number;
   private lastEvaluatedLoopCount: number | null = null;
 
@@ -44,6 +56,7 @@ export class InvokeGateOperator extends Operator {
     this.featureFlags = config.featureFlags;
     this.sessionId = config.sessionId;
     this.authState = config.authState;
+    this.toolFirstRouter = config.toolFirstRouter ?? executeToolFirstRoute;
     this.remainingLoopBudget = Number.isFinite(config.maxLoopCount)
       ? Math.max(0, config.maxLoopCount)
       : 0;
@@ -60,6 +73,31 @@ export class InvokeGateOperator extends Operator {
   async execute(params: ExecuteParams): Promise<ExecuteOutput> {
     const loopCount = (params as ExecuteParams & { loopCount?: number })
       .loopCount;
+
+    if (
+      this.featureFlags.ffToolFirstRouting &&
+      this.featureFlags.ffToolRegistry
+    ) {
+      const toolFirstResult = await this.toolFirstRouter({
+        sessionId: this.sessionId,
+        loopCount,
+        parsedPrediction: params.parsedPrediction,
+      });
+
+      if (toolFirstResult.handled) {
+        logger.info('[tool-first-routing] tool path handled action', {
+          actionType: params.parsedPrediction.action_type,
+          toolName: toolFirstResult.toolName,
+          status: toolFirstResult.status,
+        });
+        return { status: toolFirstResult.status };
+      }
+
+      logger.info('[tool-first-routing] fallback to visual operator', {
+        actionType: params.parsedPrediction.action_type,
+        fallbackReason: toolFirstResult.fallbackReason,
+      });
+    }
 
     if (this.featureFlags.ffInvokeGate) {
       this.advanceLoopBudget(loopCount);

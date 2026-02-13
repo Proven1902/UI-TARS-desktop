@@ -80,7 +80,7 @@ describe('invokeGate', () => {
     expect(decision.reasonCodes).toContain('auth_state_invalid');
   });
 
-  it('allows modeled navigate and release actions when invoke gate is enabled', () => {
+  it('allows modeled navigate/release/tool actions when invoke gate is enabled', () => {
     const flags = {
       ffToolRegistry: true,
       ffInvokeGate: true,
@@ -105,6 +105,15 @@ describe('invokeGate', () => {
         thought: 'release key',
       },
     });
+    const toolIntent = buildActionIntentV1({
+      sessionId: 'session-5b',
+      parsedPrediction: {
+        action_type: 'window.focus',
+        action_inputs: { content: 'cursor' },
+        reflection: null,
+        thought: 'focus via tool',
+      },
+    });
 
     const navigateDecision = evaluateInvokeGate(navigateIntent, {
       featureFlags: flags,
@@ -116,11 +125,18 @@ describe('invokeGate', () => {
       authState: 'valid',
       loopBudgetRemaining: 10,
     });
+    const toolDecision = evaluateInvokeGate(toolIntent, {
+      featureFlags: flags,
+      authState: 'valid',
+      loopBudgetRemaining: 10,
+    });
 
     expect(navigateDecision.decision).toBe('allow');
     expect(navigateDecision.reasonCodes).toEqual([]);
     expect(releaseDecision.decision).toBe('allow');
     expect(releaseDecision.reasonCodes).toEqual([]);
+    expect(toolDecision.decision).toBe('allow');
+    expect(toolDecision.reasonCodes).toEqual([]);
   });
 
   it('accepts fractional loop budget values without schema failure', () => {
