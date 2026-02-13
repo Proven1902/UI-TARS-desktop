@@ -11,7 +11,7 @@ Validate rollback behavior for active reliability flags and fallback semantics f
 
 ```bash
 cd apps/ui-tars
-pnpm vitest run src/main/store/featureFlags.test.ts src/main/tools/invokeGateOperator.test.ts --reporter=verbose > ../../docs/reliability/artifacts/2026-02-13-rollback-rehearsal.log
+pnpm vitest run src/main/store/featureFlags.test.ts src/main/tools/invokeGateOperator.test.ts --reporter=verbose
 ```
 
 ## Results

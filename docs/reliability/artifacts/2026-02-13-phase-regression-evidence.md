@@ -7,13 +7,13 @@
 
 ```bash
 cd apps/ui-tars
-pnpm vitest run src/main/agent/operator.test.ts src/main/remote/operators.test.ts src/main/tools/toolRegistry.test.ts src/main/tools/invokeGate.test.ts src/main/tools/invokeGateReasons.test.ts src/main/tools/systemRunTool.test.ts src/main/tools/appLaunchTool.test.ts src/main/tools/windowFocusTool.test.ts src/main/tools/windowWaitReadyTool.test.ts src/main/tools/toolFirstRouter.test.ts src/main/tools/toolFirstTarget.test.ts src/main/tools/errorTaxonomy.test.ts src/main/services/checkpointRecovery.test.ts src/main/services/codexAuthCooldown.test.ts src/main/services/reliabilityObservability.test.ts src/main/ipcRoutes/agent.test.ts --reporter=verbose > ../../docs/reliability/artifacts/2026-02-13-main-reliability-regression.log
+pnpm vitest run src/main/agent/operator.test.ts src/main/remote/operators.test.ts src/main/tools/toolRegistry.test.ts src/main/tools/invokeGate.test.ts src/main/tools/invokeGateReasons.test.ts src/main/tools/systemRunTool.test.ts src/main/tools/appLaunchTool.test.ts src/main/tools/windowFocusTool.test.ts src/main/tools/windowWaitReadyTool.test.ts src/main/tools/toolFirstRouter.test.ts src/main/tools/toolFirstTarget.test.ts src/main/tools/errorTaxonomy.test.ts src/main/services/checkpointRecovery.test.ts src/main/services/codexAuthCooldown.test.ts src/main/services/reliabilityObservability.test.ts src/main/ipcRoutes/agent.test.ts --reporter=verbose
 
 cd packages/ui-tars/sdk
-pnpm vitest run tests/retryEngine.test.ts tests/GUIAgent.test.ts --environment node --reporter=verbose > ../../../docs/reliability/artifacts/2026-02-13-sdk-reliability-regression.log
+pnpm vitest run tests/retryEngine.test.ts tests/GUIAgent.test.ts --environment node --reporter=verbose
 
 cd packages/ui-tars/action-parser
-pnpm vitest run test/actionParser.test.ts --reporter=verbose > ../../../docs/reliability/artifacts/2026-02-13-action-parser-regression.log
+pnpm vitest run test/actionParser.test.ts --reporter=verbose
 ```
 
 ## Results

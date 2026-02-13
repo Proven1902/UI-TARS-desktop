@@ -36,9 +36,8 @@ Close all remaining non-code evidence gaps so the migration plan can be marked c
 3. **Rollback rehearsal evidence for phase/global DoD**
    - Progress: completed with explicit artifact set:
      - `2026-02-13-rollback-rehearsal-002.md`
-     - `2026-02-13-rollback-rehearsal.log`
    - Execute explicit rollback rehearsal for currently used reliability flags:
-     - `ffToolRegistry`, `ffInvokeGate`, `ffToolFirstRouting`, `ffConfidenceLayer`, `ffLoopGuardrails`
+      - `ffToolRegistry`, `ffInvokeGate`, `ffToolFirstRouting`, `ffConfidenceLayer`, `ffLoopGuardrails`
    - Prove fallback behavior for new sessions when flags are disabled.
    - Capture before/after expected behavior in concise test logs.
 

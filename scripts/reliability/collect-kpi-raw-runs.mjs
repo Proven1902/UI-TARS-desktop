@@ -171,6 +171,26 @@ const runRecoverFromTimeoutScenario = async () => {
   };
 };
 
+const deriveKpiFailureFields = (scenarioId, scenarioResult) => {
+  const failed =
+    scenarioResult.finalStatus !== 'completed' || scenarioResult.success !== true;
+
+  if (!failed) {
+    return {
+      wrongClick: false,
+      maxLoopTermination: false,
+      authHardFailure: false,
+    };
+  }
+
+  return {
+    wrongClick: true,
+    maxLoopTermination: scenarioId === 'recover_from_intentional_timeout',
+    authHardFailure:
+      scenarioId === 'open_cursor' || scenarioId === 'open_settings',
+  };
+};
+
 const buildScenarioExecutionPlan = (counts) => {
   return [
     ...Array.from({ length: counts.open_cursor }, () => 'open_cursor'),
@@ -258,15 +278,17 @@ const main = async () => {
       scenarioResult = await runRecoverFromTimeoutScenario();
     }
 
+    const failureFields = deriveKpiFailureFields(scenarioId, scenarioResult);
+
     const row = {
       runId: rowRunId,
       timestamp,
       scenarioId,
       sessionId,
       finalStatus: scenarioResult.finalStatus,
-      wrongClick: false,
-      maxLoopTermination: false,
-      authHardFailure: false,
+      wrongClick: failureFields.wrongClick,
+      maxLoopTermination: failureFields.maxLoopTermination,
+      authHardFailure: failureFields.authHardFailure,
       environment: {
         git: {
           repo,
