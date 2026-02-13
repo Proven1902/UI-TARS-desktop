@@ -149,6 +149,7 @@ export class CodexAuthService {
 
     const session = await this.getValidSession();
     if (!session) {
+      this.cooldown.assertReady();
       return null;
     }
 
