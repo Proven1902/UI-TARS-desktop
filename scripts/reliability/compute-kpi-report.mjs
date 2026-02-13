@@ -66,6 +66,74 @@ const normalizeWrongClickToBoolean = (value, rowIndex) => {
   );
 };
 
+const readRequiredString = (value, fieldPath, rowIndex) => {
+  if (typeof value !== 'string' || value.trim().length === 0) {
+    throw new Error(
+      `Invalid raw-run row ${rowIndex + 1}: missing non-empty '${fieldPath}'`,
+    );
+  }
+
+  return value.trim();
+};
+
+const extractRowProvenance = (row, rowIndex) => {
+  const gitRepo = readRequiredString(
+    row?.environment?.git?.repo,
+    'environment.git.repo',
+    rowIndex,
+  );
+  const gitBranch = readRequiredString(
+    row?.environment?.git?.branch,
+    'environment.git.branch',
+    rowIndex,
+  );
+  const gitCommit = readRequiredString(
+    row?.environment?.git?.commit,
+    'environment.git.commit',
+    rowIndex,
+  );
+  const modelProvider = readRequiredString(
+    row?.environment?.model?.provider,
+    'environment.model.provider',
+    rowIndex,
+  );
+  const modelName = readRequiredString(
+    row?.environment?.model?.name,
+    'environment.model.name',
+    rowIndex,
+  );
+
+  return {
+    gitRepo,
+    gitBranch,
+    gitCommit,
+    modelProvider,
+    modelName,
+  };
+};
+
+const ensureMatchingProvenance = (reference, current, rowIndex) => {
+  const fields = [
+    ['environment.git.repo', reference.gitRepo, current.gitRepo],
+    ['environment.git.branch', reference.gitBranch, current.gitBranch],
+    ['environment.git.commit', reference.gitCommit, current.gitCommit],
+    [
+      'environment.model.provider',
+      reference.modelProvider,
+      current.modelProvider,
+    ],
+    ['environment.model.name', reference.modelName, current.modelName],
+  ];
+
+  for (const [field, expected, actual] of fields) {
+    if (expected !== actual) {
+      throw new Error(
+        `Invalid raw-run row ${rowIndex + 1}: mismatched ${field} ('${actual}' != '${expected}')`,
+      );
+    }
+  }
+};
+
 const parseRepoFromRemote = (remoteUrl) => {
   const trimmed = remoteUrl.trim();
   if (!trimmed) {
@@ -150,8 +218,35 @@ const ensureRow = (row, rowIndex) => {
   }
 };
 
+const parseAsJsonArray = (trimmedContent) => {
+  try {
+    const parsed = JSON.parse(trimmedContent);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
 const readRawRuns = async (rawPath) => {
   const content = await fs.readFile(rawPath, 'utf8');
+  const trimmedContent = content.trim();
+  if (!trimmedContent) {
+    throw new Error('Raw runs artifact is empty');
+  }
+
+  const parsedArray = parseAsJsonArray(trimmedContent);
+  if (parsedArray) {
+    return parsedArray.map((row, index) => {
+      if (!row || typeof row !== 'object' || Array.isArray(row)) {
+        throw new Error(
+          `Invalid raw-run row ${index + 1}: row must be a JSON object`,
+        );
+      }
+      ensureRow(row, index);
+      return row;
+    });
+  }
+
   const lines = content
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -181,6 +276,17 @@ const main = async () => {
   const model = getRequiredArg(args, 'model');
 
   const rows = await readRawRuns(rawPath);
+  const rowProvenance = rows.map((row, index) => {
+    return extractRowProvenance(row, index);
+  });
+  const referenceProvenance = rowProvenance[0];
+  if (!referenceProvenance) {
+    throw new Error('Raw runs artifact must include at least one row');
+  }
+
+  rowProvenance.slice(1).forEach((provenance, index) => {
+    ensureMatchingProvenance(referenceProvenance, provenance, index + 1);
+  });
 
   const openAppRows = rows.filter((row) => OPEN_APP_SCENARIO_IDS.has(row.scenarioId));
   const openAppSuccessCount = openAppRows.filter(
@@ -217,6 +323,36 @@ const main = async () => {
   if (!repoIdentity || repoIdentity === 'unknown') {
     throw new Error(
       'Unable to resolve repository identity. Provide --repo <owner/repo>.',
+    );
+  }
+
+  if (referenceProvenance.gitRepo !== repoIdentity) {
+    throw new Error(
+      `CLI --repo (${repoIdentity}) does not match row provenance (${referenceProvenance.gitRepo})`,
+    );
+  }
+
+  if (referenceProvenance.gitBranch !== branch) {
+    throw new Error(
+      `CLI --branch (${branch}) does not match row provenance (${referenceProvenance.gitBranch})`,
+    );
+  }
+
+  if (referenceProvenance.gitCommit !== commit) {
+    throw new Error(
+      `CLI --commit (${commit}) does not match row provenance (${referenceProvenance.gitCommit})`,
+    );
+  }
+
+  if (referenceProvenance.modelProvider !== provider) {
+    throw new Error(
+      `CLI --provider (${provider}) does not match row provenance (${referenceProvenance.modelProvider})`,
+    );
+  }
+
+  if (referenceProvenance.modelName !== model) {
+    throw new Error(
+      `CLI --model (${model}) does not match row provenance (${referenceProvenance.modelName})`,
     );
   }
 
