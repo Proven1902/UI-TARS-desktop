@@ -118,7 +118,7 @@ The two-run gate check must also fail when:
 
 - `environment.featureFlags` values differ between reports (`ffToolRegistry`, `ffInvokeGate`, `ffToolFirstRouting`, `ffConfidenceLayer`, `ffLoopGuardrails`)
 - `executionStatus.rawRunsPath` is missing on either report
-- both reports reference the same raw-runs evidence path (including equivalent resolved paths)
+- both reports reference the same raw-runs evidence path (including equivalent paths after resolving each one relative to its report file)
 
 ## 6. Acceptance thresholds
 

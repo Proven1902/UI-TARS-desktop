@@ -117,8 +117,11 @@ const getRequiredRawRunsPath = (report, reportLabel) => {
   return rawRunsPath.trim();
 };
 
-const normalizePathForComparison = (filePath) => {
-  const resolvedPath = path.resolve(filePath);
+const normalizePathForComparison = (rawRunsPath, reportFilePath) => {
+  const reportDirectory = path.dirname(path.resolve(reportFilePath));
+  const resolvedPath = path.isAbsolute(rawRunsPath)
+    ? path.normalize(rawRunsPath)
+    : path.resolve(reportDirectory, rawRunsPath);
   if (process.platform === 'win32') {
     return resolvedPath.toLowerCase();
   }
@@ -193,12 +196,19 @@ const main = async () => {
 
   const firstRawRunsPath = getRequiredRawRunsPath(first, 'first report');
   const secondRawRunsPath = getRequiredRawRunsPath(second, 'second report');
+  const firstResolvedRawRunsPath = normalizePathForComparison(
+    firstRawRunsPath,
+    firstResolvedPath,
+  );
+  const secondResolvedRawRunsPath = normalizePathForComparison(
+    secondRawRunsPath,
+    secondResolvedPath,
+  );
   if (
-    normalizePathForComparison(firstRawRunsPath) ===
-    normalizePathForComparison(secondRawRunsPath)
+    firstResolvedRawRunsPath === secondResolvedRawRunsPath
   ) {
     throw new Error(
-      `KPI gate requires different executionStatus.rawRunsPath values (both resolved to '${firstRawRunsPath}')`,
+      `KPI gate requires different executionStatus.rawRunsPath values (both resolve to '${firstResolvedRawRunsPath}')`,
     );
   }
 

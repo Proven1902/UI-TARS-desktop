@@ -64,7 +64,7 @@ The gate checker rejects:
 
 - duplicated `--first/--second` report path
 - duplicated `scope.runId` values
-- duplicated `executionStatus.rawRunsPath` values (including equivalent resolved paths)
+- duplicated `executionStatus.rawRunsPath` values (including equivalent paths after resolving each one relative to its report file)
 - mismatched build/model provenance fields across reports (`environment.git.*`, `environment.model.*`, `environment.app.version`)
 - mismatched reliability feature flags across reports (`environment.featureFlags.ffToolRegistry`, `ffInvokeGate`, `ffToolFirstRouting`, `ffConfidenceLayer`, `ffLoopGuardrails`)
 - reports without full coverage pass
