@@ -11,9 +11,9 @@ Use this checklist to decide if the migration plan is fully complete.
 ## B. Baseline + KPI evidence
 
 - [x] Baseline harness protocol exists (`docs/reliability/baseline-harness-runbook.md`)
-- [ ] Baseline artifact report exists using required metrics
-- [ ] Two consecutive KPI gate reports exist and pass thresholds
-- [ ] Raw run data linked for every report
+- [x] Baseline artifact report exists using required metrics
+- [x] Two consecutive KPI gate reports exist and pass thresholds
+- [x] Raw run data linked for every report
 
 ## C. Phase DoD evidence
 
@@ -41,6 +41,10 @@ Use this checklist to decide if the migration plan is fully complete.
 
 ## F. Current closure snapshot (2026-02-13)
 
-- Merged closure PRs: `#20`, `#21`
+- Merged closure PRs: `#20`, `#21`, `#22`
 - Ops/sign-off runbook: `docs/reliability/operations-signoff-runbook.md`
-- Still required for final readiness: real fixed-environment baseline + two consecutive KPI run artifacts + full rollback rehearsal evidence
+- New measured KPI evidence set:
+  - baseline: `docs/reliability/artifacts/2026-02-13-baseline-run-002.report.json`
+  - gate: `docs/reliability/artifacts/2026-02-13-gate-run-003.report.json`, `docs/reliability/artifacts/2026-02-13-gate-run-004.report.json`
+  - two-run gate output: `docs/reliability/artifacts/2026-02-13-gate-run-003-004.gate.json`
+- Still required for final readiness: full rollback rehearsal evidence + no-regression smoke/e2e evidence + final approval note
