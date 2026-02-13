@@ -50,6 +50,12 @@ For every run, persist at minimum:
 - wrong-click boolean/count
 - max-loop termination boolean
 - auth hard-failure boolean
+- row-level provenance fields (required on every row and must be consistent across batch):
+  - `environment.git.repo`
+  - `environment.git.branch`
+  - `environment.git.commit`
+  - `environment.model.provider`
+  - `environment.model.name`
 - active feature flags and provider/model settings
 
 Store artifacts in `docs/reliability/artifacts/` using timestamped file names.
@@ -58,7 +64,7 @@ Store artifacts in `docs/reliability/artifacts/` using timestamped file names.
 
 For each measurement batch produce:
 
-1. Raw runs file (JSON or NDJSON)
+1. Raw runs file (NDJSON or JSON array)
 2. Aggregated report JSON (see template file)
 3. Short markdown summary with conclusions and known caveats
 

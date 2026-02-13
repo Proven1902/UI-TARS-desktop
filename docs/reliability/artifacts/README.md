@@ -2,6 +2,11 @@
 
 This directory stores baseline/KPI and rollback evidence artifacts.
 
+Raw runs input supports two formats:
+
+- NDJSON (one JSON object per line)
+- JSON array (array of run-row objects)
+
 ## Canonical scenario IDs
 
 Use these IDs consistently in raw runs (`scenarioId`):
@@ -10,6 +15,14 @@ Use these IDs consistently in raw runs (`scenarioId`):
 - `open_settings`
 - `focus_existing_browser_window`
 - `recover_from_intentional_timeout`
+
+Each raw run row must include consistent row-level provenance:
+
+- `environment.git.repo`
+- `environment.git.branch`
+- `environment.git.commit`
+- `environment.model.provider`
+- `environment.model.name`
 
 ## Generate KPI report from raw runs
 
