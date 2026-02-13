@@ -275,8 +275,13 @@ export class GUIAgent<T extends Operator> extends BaseGUIAgent<
                 (error?.name === 'APIUserAbortError' ||
                   error?.name === 'AbortError' ||
                   error?.message?.includes('aborted'));
+              const isUserInitiatedStop = !!(signal?.aborted || this.isStopped);
 
-              if (isAbortError && !(signal?.aborted || this.isStopped)) {
+              if (isAbortError && isUserInitiatedStop) {
+                throw error;
+              }
+
+              if (isAbortError) {
                 logger.warn(
                   '[GUIAgent] Model invoke aborted without user stop signal, retrying',
                 );
@@ -474,6 +479,7 @@ export class GUIAgent<T extends Operator> extends BaseGUIAgent<
       if (isAbortError && isUserInitiatedStop) {
         logger.info('[GUIAgent] Catch: request was aborted');
         data.status = StatusEnum.USER_STOPPED;
+        data.error = undefined;
         return;
       }
 
